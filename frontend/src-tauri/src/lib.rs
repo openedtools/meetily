@@ -49,6 +49,7 @@ pub mod anthropic;
 pub mod groq;
 pub mod openrouter;
 pub mod parakeet_engine;
+pub mod people;
 pub mod state;
 pub mod summary;
 pub mod tray;
@@ -731,6 +732,17 @@ pub fn run() {
             api::api_get_meeting_transcripts,
             api::api_save_meeting_title,
             api::api_save_transcript,
+            // People directory and speaker labels
+            people::commands::api_list_people,
+            people::commands::api_create_person,
+            people::commands::api_rename_person,
+            people::commands::api_delete_person,
+            people::commands::api_get_meeting_speakers,
+            people::commands::api_add_meeting_speaker,
+            people::commands::api_assign_speaker_person,
+            people::commands::api_set_transcript_speaker,
+            people::commands::api_merge_meeting_speakers,
+            people::commands::api_delete_meeting_speaker,
             api::open_meeting_folder,
             api::test_backend_connection,
             api::debug_backend_connection,
