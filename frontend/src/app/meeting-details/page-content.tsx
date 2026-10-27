@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { MeetingSummary, SummaryProcessResponse } from '@/types';
+import { MeetingSummary, SummaryProcessResponse, Transcript } from '@/types';
 import { useSidebar } from '@/components/Sidebar/SidebarProvider';
 import Analytics from '@/lib/analytics';
 import { invoke } from '@tauri-apps/api/core';
@@ -18,6 +18,8 @@ import { useTemplates } from '@/hooks/meeting-details/useTemplates';
 import { useCopyOperations } from '@/hooks/meeting-details/useCopyOperations';
 import { useMeetingOperations } from '@/hooks/meeting-details/useMeetingOperations';
 import { useConfig } from '@/contexts/ConfigContext';
+import { useMeetingSpeakers } from '@/hooks/useMeetingSpeakers';
+import { MeetingSpeakersProvider } from '@/contexts/MeetingSpeakersContext';
 
 export default function PageContent({
   meeting,
@@ -27,6 +29,7 @@ export default function PageContent({
   onAutoGenerateComplete,
   onMeetingUpdated,
   onRefetchTranscripts,
+  onPatchTranscripts,
   // Pagination props for efficient transcript loading
   segments,
   hasMore,
@@ -42,6 +45,7 @@ export default function PageContent({
   onAutoGenerateComplete?: () => void;
   onMeetingUpdated?: () => Promise<void>;
   onRefetchTranscripts?: () => Promise<void>;
+  onPatchTranscripts?: (update: (transcript: Transcript) => Transcript) => void;
   // Pagination props
   segments?: any[];
   hasMore?: boolean;
@@ -76,6 +80,7 @@ export default function PageContent({
   // Custom hooks
   const meetingData = useMeetingData({ meeting, summaryData, onMeetingUpdated });
   const templates = useTemplates();
+  const speakers = useMeetingSpeakers(meeting.id, onPatchTranscripts);
 
   // Callback to register the modal open function
   const handleRegisterModalOpen = (openFn: () => void) => {
@@ -186,6 +191,7 @@ export default function PageContent({
   ]);
 
   return (
+    <MeetingSpeakersProvider value={speakers}>
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -254,5 +260,6 @@ export default function PageContent({
         />
       </div>
     </motion.div>
+    </MeetingSpeakersProvider>
   );
 }

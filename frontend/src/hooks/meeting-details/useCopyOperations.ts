@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import Analytics from '@/lib/analytics';
 import { invoke as invokeTauri } from '@tauri-apps/api/core';
 import { hasVisibleSummaryContent } from '@/lib/summary-content';
+import { fetchSpeakerNames, speakerPrefix } from '@/lib/speakers';
 
 interface UseCopyOperationsProps {
   meeting: any;
@@ -84,10 +85,12 @@ export function useCopyOperations({
       return `[${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}]`;
     };
 
+    const speakerNames = await fetchSpeakerNames(meeting.id);
+
     const header = `# Transcript of the Meeting: ${meeting.id} - ${meetingTitle ?? meeting.title}\n\n`;
     const date = `## Date: ${new Date(meeting.created_at).toLocaleDateString()}\n\n`;
     const fullTranscript = allTranscripts
-      .map(t => `${formatTime(t.audio_start_time, t.timestamp)} ${t.text}  `)
+      .map(t => `${formatTime(t.audio_start_time, t.timestamp)} ${speakerPrefix(t.speaker, speakerNames)}${t.text}  `)
       .join('\n');
 
     await navigator.clipboard.writeText(header + date + fullTranscript);

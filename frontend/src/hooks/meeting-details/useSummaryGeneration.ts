@@ -11,6 +11,7 @@ import { useSidebar } from '@/components/Sidebar/SidebarProvider';
 import { invoke as invokeTauri } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import Analytics from '@/lib/analytics';
+import { fetchSpeakerNames, speakerPrefix } from '@/lib/speakers';
 
 import {
   detectAndCacheSummaryLanguage,
@@ -433,7 +434,7 @@ export function useSummaryGeneration({
     }
   }, []);
 
-  const buildSummaryTranscriptPayload = useCallback((allTranscripts: Transcript[]) => {
+  const buildSummaryTranscriptPayload = useCallback((allTranscripts: Transcript[], speakerNames: Record<string, string> = {}) => {
     const formatTime = (seconds: number | undefined, fallbackTimestamp: string): string => {
       if (seconds === undefined) {
         return fallbackTimestamp;
@@ -444,7 +445,7 @@ export function useSummaryGeneration({
 
     return {
       transcriptText: allTranscripts
-        .map((transcript) => `${formatTime(transcript.audio_start_time, transcript.timestamp)} ${transcript.text}`)
+        .map((transcript) => `${formatTime(transcript.audio_start_time, transcript.timestamp)} ${speakerPrefix(transcript.speaker, speakerNames)}${transcript.text}`)
         .join('\n'),
       transcriptTexts: allTranscripts.map((transcript) => transcript.text),
     };
@@ -500,7 +501,7 @@ export function useSummaryGeneration({
     }
 
     await processSummary({
-      ...buildSummaryTranscriptPayload(allTranscripts),
+      ...buildSummaryTranscriptPayload(allTranscripts, await fetchSpeakerNames(meeting.id)),
       customPrompt,
     });
   }, [
@@ -525,7 +526,7 @@ export function useSummaryGeneration({
     }
 
     await processSummary({
-      ...buildSummaryTranscriptPayload(allTranscripts),
+      ...buildSummaryTranscriptPayload(allTranscripts, await fetchSpeakerNames(meeting.id)),
       isRegeneration: true
     });
   }, [meeting.id, fetchAllTranscripts, buildSummaryTranscriptPayload, processSummary]);

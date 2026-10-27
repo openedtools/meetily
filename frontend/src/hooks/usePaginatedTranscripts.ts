@@ -25,6 +25,8 @@ interface UsePaginatedTranscriptsReturn {
     loadMore: () => Promise<void>;
     reset: () => void;
     refetch: () => Promise<void>;
+    /** Update already-loaded lines in place (e.g. after a speaker edit) without refetching. */
+    patchTranscripts: (update: (transcript: Transcript) => Transcript) => void;
 }
 
 /**
@@ -37,6 +39,7 @@ function convertTranscriptsToSegments(transcripts: Transcript[]): TranscriptSegm
         endTime: t.audio_end_time,
         text: t.text,
         confidence: t.confidence,
+        speaker: t.speaker,
     }));
 }
 
@@ -185,6 +188,10 @@ export function usePaginatedTranscripts({
         }
     }, [meetingId, reset, loadMetadata, loadTranscriptsAtOffset, isCurrentRequest]);
 
+    const patchTranscripts = useCallback((update: (transcript: Transcript) => Transcript) => {
+        setTranscripts(prev => prev.map(update));
+    }, []);
+
     // A new meeting or effect lifetime owns its own requests.
     useEffect(() => {
         activeMeetingIdRef.current = meetingId;
@@ -219,5 +226,6 @@ export function usePaginatedTranscripts({
         loadMore,
         reset,
         refetch,
+        patchTranscripts,
     };
 }

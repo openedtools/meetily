@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { RecordingStatusBar } from "./RecordingStatusBar";
 import { motion, AnimatePresence } from "framer-motion";
 import { TranscriptSegmentData } from "@/types";
+import { SpeakerChip } from "./Speakers/SpeakerChip";
 
 export interface VirtualizedTranscriptViewProps {
     /** Transcript segments to display */
@@ -71,6 +72,8 @@ const TranscriptSegment = memo(function TranscriptSegment({
     confidence,
     isStreaming,
     showConfidence,
+    speaker,
+    showSpeakerName,
 }: {
     id: string;
     timestamp: number;
@@ -78,11 +81,13 @@ const TranscriptSegment = memo(function TranscriptSegment({
     confidence?: number;
     isStreaming: boolean;
     showConfidence: boolean;
+    speaker?: string;
+    showSpeakerName: boolean;
 }) {
     const displayText = cleanStopWords(text) || (text.trim() === '' ? '[Silence]' : text);
 
     return (
-        <div id={`segment-${id}`} className="mb-3">
+        <div id={`segment-${id}`} className="group mb-3">
             <div className="flex items-start gap-2">
                 <Tooltip>
                     <TooltipTrigger>
@@ -97,6 +102,9 @@ const TranscriptSegment = memo(function TranscriptSegment({
                     </TooltipContent>
                 </Tooltip>
                 <div className="flex-1">
+                    {speaker && showSpeakerName && (
+                        <SpeakerChip transcriptId={id} speakerKey={speaker} showName />
+                    )}
                     {isStreaming ? (
                         <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2">
                             <p className="text-base text-gray-800 leading-relaxed">{displayText}</p>
@@ -105,6 +113,10 @@ const TranscriptSegment = memo(function TranscriptSegment({
                         <p className="text-base text-gray-800 leading-relaxed">{displayText}</p>
                     )}
                 </div>
+                {/* Hover-only control for lines that don't carry a visible speaker name */}
+                {!(speaker && showSpeakerName) && (
+                    <SpeakerChip transcriptId={id} speakerKey={speaker} showName={false} />
+                )}
             </div>
         </div>
     );
@@ -296,6 +308,8 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                         confidence={segment.confidence}
                                         isStreaming={isStreaming}
                                         showConfidence={showConfidence}
+                                        speaker={segment.speaker}
+                                        showSpeakerName={segment.speaker !== segments[virtualRow.index - 1]?.speaker}
                                     />
                                 </div>
                             );
@@ -335,7 +349,7 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                 // Simple rendering for small lists (better animations)
                 <>
                     <div className="space-y-1">
-                        {segments.map((segment) => {
+                        {segments.map((segment, index) => {
                             const isStreaming = streamingSegmentId === segment.id;
 
                             return (
@@ -352,6 +366,8 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                         confidence={segment.confidence}
                                         isStreaming={isStreaming}
                                         showConfidence={showConfidence}
+                                        speaker={segment.speaker}
+                                        showSpeakerName={segment.speaker !== segments[index - 1]?.speaker}
                                     />
                                 </motion.div>
                             );
