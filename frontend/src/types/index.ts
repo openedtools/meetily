@@ -145,6 +145,20 @@ export interface TranscriptSegmentData {
   speaker?: string; // Speaker slot key ("S1", "S2", ...)
 }
 
+// Folders for organizing meetings
+export interface Folder {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FolderSummary {
+  id: string;
+  name: string;
+  meeting_count: number;
+}
+
 // People directory and per-meeting speakers
 export interface Person {
   id: string;
