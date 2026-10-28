@@ -1,3 +1,4 @@
+pub mod folders;
 pub mod meeting;
 pub mod people;
 pub mod setting;

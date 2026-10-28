@@ -8,8 +8,8 @@ use crate::{
     database::{
         models::MeetingModel,
         repositories::{
-            meeting::MeetingsRepository, setting::SettingsRepository,
-            transcript::TranscriptsRepository,
+            folders::FoldersRepository, meeting::MeetingsRepository,
+            setting::SettingsRepository, transcript::TranscriptsRepository,
         },
     },
     state::AppState,
@@ -30,6 +30,8 @@ pub struct ApiResponse<T> {
 pub struct Meeting {
     pub id: String,
     pub title: String,
+    /// Organizational folder the meeting is filed in; None when unfiled
+    pub folder_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -332,18 +334,17 @@ pub async fn api_get_meetings<R: Runtime>(
         auth_token.is_some()
     );
     let pool = state.db_manager.pool();
-    let meetings: Result<Vec<MeetingModel>, sqlx::Error> =
-        MeetingsRepository::get_meetings(pool).await;
 
-    match meetings {
-        Ok(meeting_models) => {
-            log_info!("Successfully got {} meetings", meeting_models.len());
+    match FoldersRepository::list_meetings(pool).await {
+        Ok(meeting_items) => {
+            log_info!("Successfully got {} meetings", meeting_items.len());
 
-            let result: Vec<Meeting> = meeting_models
+            let result: Vec<Meeting> = meeting_items
                 .into_iter()
                 .map(|m| Meeting {
                     id: m.id,
                     title: m.title,
+                    folder_id: m.folder_id,
                 })
                 .collect();
             Ok(result)

@@ -40,6 +40,7 @@ pub mod api;
 pub mod audio;
 pub mod config;
 pub mod console_utils;
+pub mod folders;
 pub mod database;
 pub mod notifications;
 pub mod ollama;
@@ -732,6 +733,12 @@ pub fn run() {
             api::api_get_meeting_transcripts,
             api::api_save_meeting_title,
             api::api_save_transcript,
+            // Folders for organizing meetings
+            folders::commands::api_list_folders,
+            folders::commands::api_create_folder,
+            folders::commands::api_rename_folder,
+            folders::commands::api_delete_folder,
+            folders::commands::api_move_meeting_to_folder,
             // People directory and speaker labels
             people::commands::api_list_people,
             people::commands::api_create_person,
