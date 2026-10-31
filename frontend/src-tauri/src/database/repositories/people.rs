@@ -574,6 +574,102 @@ impl PeopleRepository {
         Ok(speakers)
     }
 
+    /// Replace a meeting's speaker labels with the result of automatic detection.
+    ///
+    /// `assignments` pairs a transcript line id with its detected speaker (0-based, `None` to
+    /// leave the line unlabelled). Speakers become "S1", "S2", ... in that order. Names the user
+    /// already gave are not lost: a new speaker inherits a person when at least half of its lines
+    /// were previously that person's, and one person is never given to two speakers.
+    pub async fn apply_detected_speakers(
+        pool: &SqlitePool,
+        meeting_id: &str,
+        assignments: &[(String, Option<usize>)],
+    ) -> Result<Vec<MeetingSpeaker>, PeopleError> {
+        use std::collections::{HashMap, HashSet};
+
+        let mut tx = pool.begin().await?;
+        Self::require_meeting(&mut tx, meeting_id).await?;
+
+        let old_label_of_line: HashMap<String, Option<String>> =
+            sqlx::query_as::<_, (String, Option<String>)>("SELECT id, speaker FROM transcripts WHERE meeting_id = ?")
+                .bind(meeting_id)
+                .fetch_all(&mut *tx)
+                .await?
+                .into_iter()
+                .collect();
+        let person_of_old_speaker: HashMap<String, String> = sqlx::query_as::<_, (String, String)>(
+            "SELECT speaker_key, person_id FROM meeting_speakers WHERE meeting_id = ? AND person_id IS NOT NULL",
+        )
+        .bind(meeting_id)
+        .fetch_all(&mut *tx)
+        .await?
+        .into_iter()
+        .collect();
+
+        // How many of each new speaker's lines belonged to each named old speaker
+        let mut lines_of: HashMap<usize, usize> = HashMap::new();
+        let mut overlap: HashMap<(usize, String), usize> = HashMap::new();
+        for (line_id, label) in assignments {
+            let Some(label) = label else { continue };
+            if speaker_number(&format!("S{}", label + 1)).is_none() {
+                return invalid("Detected speaker number is out of range");
+            }
+            *lines_of.entry(*label).or_default() += 1;
+            if let Some(Some(old_key)) = old_label_of_line.get(line_id) {
+                if person_of_old_speaker.contains_key(old_key) {
+                    *overlap.entry((*label, old_key.clone())).or_default() += 1;
+                }
+            }
+        }
+        let mut candidates: Vec<(usize, String, usize)> = overlap
+            .into_iter()
+            .filter(|((label, _), count)| count * 2 >= lines_of[label])
+            .map(|((label, old_key), count)| (label, old_key, count))
+            .collect();
+        candidates.sort_by(|a, b| b.2.cmp(&a.2).then(a.0.cmp(&b.0)).then(a.1.cmp(&b.1)));
+        let mut carried: HashMap<usize, String> = HashMap::new();
+        let mut people_used: HashSet<String> = HashSet::new();
+        for (label, old_key, _) in candidates {
+            if carried.contains_key(&label) {
+                continue;
+            }
+            let person = &person_of_old_speaker[&old_key];
+            if people_used.insert(person.clone()) {
+                carried.insert(label, person.clone());
+            }
+        }
+
+        sqlx::query("DELETE FROM meeting_speakers WHERE meeting_id = ?").bind(meeting_id).execute(&mut *tx).await?;
+        sqlx::query("UPDATE transcripts SET speaker = NULL WHERE meeting_id = ?").bind(meeting_id).execute(&mut *tx).await?;
+
+        let mut labels: Vec<usize> = lines_of.keys().copied().collect();
+        labels.sort_unstable();
+        for label in labels {
+            sqlx::query("INSERT INTO meeting_speakers (id, meeting_id, speaker_key, person_id, created_at) VALUES (?, ?, ?, ?, ?)")
+                .bind(format!("speaker-{}", Uuid::new_v4()))
+                .bind(meeting_id)
+                .bind(format!("S{}", label + 1))
+                .bind(carried.get(&label))
+                .bind(Utc::now().to_rfc3339())
+                .execute(&mut *tx)
+                .await?;
+        }
+        for (line_id, label) in assignments {
+            if let Some(label) = label {
+                sqlx::query("UPDATE transcripts SET speaker = ? WHERE id = ? AND meeting_id = ?")
+                    .bind(format!("S{}", label + 1))
+                    .bind(line_id)
+                    .bind(meeting_id)
+                    .execute(&mut *tx)
+                    .await?;
+            }
+        }
+
+        let speakers = Self::fetch_speakers(&mut tx, meeting_id).await?;
+        tx.commit().await?;
+        Ok(speakers)
+    }
+
     /// Remove a speaker slot; its lines become unlabeled.
     pub async fn delete_speaker(
         pool: &SqlitePool,
@@ -887,5 +983,70 @@ mod tests {
 
         assert!(PeopleRepository::merge_people(&pool, &ana.id, &ana.id).await.is_err());
         assert!(PeopleRepository::merge_people(&pool, "nope", &ana.id).await.is_err());
+    }
+
+    fn assign(pairs: &[(&str, Option<usize>)]) -> Vec<(String, Option<usize>)> {
+        pairs.iter().map(|(id, l)| (id.to_string(), *l)).collect()
+    }
+
+    #[tokio::test]
+    async fn detection_creates_numbered_speakers_and_labels_the_lines() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        for (i, id) in ["l1", "l2", "l3", "l4"].iter().enumerate() {
+            sqlx::query("INSERT INTO transcripts (id, meeting_id, transcript, timestamp, audio_start_time) VALUES (?, 'm1', 'x', '10:00', ?)")
+                .bind(id).bind(i as f64).execute(&pool).await.unwrap();
+        }
+        let speakers = PeopleRepository::apply_detected_speakers(
+            &pool, "m1", &assign(&[("l1", Some(0)), ("l2", Some(1)), ("l3", Some(0)), ("l4", None)]),
+        ).await.unwrap();
+        let summary: Vec<_> = speakers.iter().map(|s| (s.speaker_key.as_str(), s.segment_count)).collect();
+        assert_eq!(summary, [("S1", 2), ("S2", 1)]);
+        let labels: Vec<(String, Option<String>)> = sqlx::query_as("SELECT id, speaker FROM transcripts ORDER BY id").fetch_all(&pool).await.unwrap();
+        assert_eq!(labels[3], ("l4".to_string(), None), "an unlabelled line stays unlabelled");
+        assert!(PeopleRepository::apply_detected_speakers(&pool, "nope", &[]).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn re_detecting_keeps_names_for_voices_that_still_match() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        // Before: Ana = S1 (a1 a2 a3), Ben = S2 (b1 b2)
+        for (id, key) in [("a1", "S1"), ("a2", "S1"), ("a3", "S1"), ("b1", "S2"), ("b2", "S2"), ("c1", "S2")] {
+            add_line_text(&pool, id, "m1", 0.0, key, "x").await;
+        }
+        let ana = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        let ben = PeopleRepository::get_or_create_person(&pool, "Ben").await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", "S1", Some(&ana.id)).await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", "S2", Some(&ben.id)).await.unwrap();
+
+        // New detection numbers them the other way round, and puts c1 (was Ben's) with Ana's group
+        let speakers = PeopleRepository::apply_detected_speakers(&pool, "m1", &assign(&[
+            ("b1", Some(0)), ("b2", Some(0)),                                   // new S1 = old Ben's voice
+            ("a1", Some(1)), ("a2", Some(1)), ("a3", Some(1)), ("c1", Some(1)), // new S2: 3 of 4 lines were Ana's
+        ])).await.unwrap();
+        let by_key: std::collections::HashMap<_, _> = speakers.iter().map(|s| (s.speaker_key.as_str(), s.person_name.as_deref())).collect();
+        assert_eq!(by_key["S1"], Some("Ben"));
+        assert_eq!(by_key["S2"], Some("Ana"));
+    }
+
+    #[tokio::test]
+    async fn a_name_is_not_carried_over_on_a_weak_match_or_given_to_two_speakers() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        for (id, key) in [("a1", "S1"), ("a2", "S1"), ("x1", "S2"), ("x2", "S2"), ("x3", "S2"), ("x4", "S2")] {
+            add_line_text(&pool, id, "m1", 0.0, key, "x").await;
+        }
+        let ana = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", "S1", Some(&ana.id)).await.unwrap();
+
+        // Ana's two lines are split across two new speakers: only a group where she is >= half keeps her
+        let speakers = PeopleRepository::apply_detected_speakers(&pool, "m1", &assign(&[
+            ("a1", Some(0)), ("x1", Some(0)), ("x2", Some(0)),   // 1 of 3 lines: too weak
+            ("a2", Some(1)), ("x3", Some(1)),                    // 1 of 2 lines: half, enough
+            ("x4", Some(2)),
+        ])).await.unwrap();
+        let named: Vec<_> = speakers.iter().filter_map(|s| s.person_name.as_deref().map(|n| (s.speaker_key.as_str(), n))).collect();
+        assert_eq!(named, [("S2", "Ana")], "Ana goes to exactly one speaker");
     }
 }

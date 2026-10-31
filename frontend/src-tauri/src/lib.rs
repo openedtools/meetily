@@ -40,6 +40,7 @@ pub mod api;
 pub mod audio;
 pub mod config;
 pub mod console_utils;
+pub mod diarization;
 pub mod folders;
 pub mod database;
 pub mod notifications;
@@ -739,6 +740,10 @@ pub fn run() {
             folders::commands::api_rename_folder,
             folders::commands::api_delete_folder,
             folders::commands::api_move_meeting_to_folder,
+            // Automatic speaker detection
+            diarization::commands::speaker_model_status,
+            diarization::commands::speaker_model_download,
+            diarization::commands::api_detect_speakers,
             // People directory and speaker labels
             people::commands::api_list_people,
             people::commands::api_create_person,
