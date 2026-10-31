@@ -1,4 +1,4 @@
-use super::models::{AssignSpeakerResult, MeetingSpeaker, Person, PersonSummary};
+use super::models::{AssignSpeakerResult, MeetingSpeaker, Person, PersonDetail, PersonLine, PersonMeetingHit, PersonSummary};
 use crate::database::repositories::people::{PeopleError, PeopleRepository};
 use crate::state::AppState;
 use log::{error as log_error, info as log_info};
@@ -52,6 +52,67 @@ pub async fn api_delete_person(
     PeopleRepository::delete_person(state.db_manager.pool(), &person_id)
         .await
         .map_err(|e| ui_error("api_delete_person", e))
+}
+
+/// A person with every meeting they appear in.
+#[tauri::command]
+pub async fn api_get_person(
+    state: tauri::State<'_, AppState>,
+    person_id: String,
+) -> Result<PersonDetail, String> {
+    PeopleRepository::get_person_detail(state.db_manager.pool(), &person_id)
+        .await
+        .map_err(|e| ui_error("api_get_person", e))
+}
+
+/// Save notes about a person (blank clears them).
+#[tauri::command]
+pub async fn api_update_person_notes(
+    state: tauri::State<'_, AppState>,
+    person_id: String,
+    notes: Option<String>,
+) -> Result<Person, String> {
+    PeopleRepository::update_person_notes(state.db_manager.pool(), &person_id, notes.as_deref())
+        .await
+        .map_err(|e| ui_error("api_update_person_notes", e))
+}
+
+/// What a person said across all meetings, optionally filtered by text.
+#[tauri::command]
+pub async fn api_get_person_lines(
+    state: tauri::State<'_, AppState>,
+    person_id: String,
+    query: Option<String>,
+    limit: Option<u32>,
+) -> Result<Vec<PersonLine>, String> {
+    let limit = limit.unwrap_or(200).min(1000) as usize;
+    PeopleRepository::list_person_lines(state.db_manager.pool(), &person_id, query.as_deref(), limit)
+        .await
+        .map_err(|e| ui_error("api_get_person_lines", e))
+}
+
+/// Fold a duplicate person into another; returns the person who remains.
+#[tauri::command]
+pub async fn api_merge_people(
+    state: tauri::State<'_, AppState>,
+    from_id: String,
+    into_id: String,
+) -> Result<Person, String> {
+    log_info!("api_merge_people called: {} -> {}", from_id, into_id);
+    PeopleRepository::merge_people(state.db_manager.pool(), &from_id, &into_id)
+        .await
+        .map_err(|e| ui_error("api_merge_people", e))
+}
+
+/// Meetings where someone whose name matches the query spoke (sidebar "search by person").
+#[tauri::command]
+pub async fn api_search_meetings_by_person(
+    state: tauri::State<'_, AppState>,
+    query: String,
+) -> Result<Vec<PersonMeetingHit>, String> {
+    PeopleRepository::search_meetings_by_person(state.db_manager.pool(), &query)
+        .await
+        .map_err(|e| ui_error("api_search_meetings_by_person", e))
 }
 
 #[tauri::command]

@@ -1,9 +1,12 @@
-use crate::people::models::{MeetingSpeaker, Person, PersonSummary};
+use crate::people::models::{MeetingSpeaker, Person, PersonDetail, PersonLine, PersonMeeting, PersonMeetingHit, PersonSummary};
 use chrono::Utc;
 use sqlx::{Error as SqlxError, SqliteConnection, SqlitePool};
 use uuid::Uuid;
 
 const MAX_NAME_LEN: usize = 120;
+const MAX_NOTES_LEN: usize = 20_000;
+/// Upper bound on lines scanned for one person; keeps a text search over a very large history quick.
+const MAX_LINES_SCANNED: i64 = 50_000;
 
 #[derive(Debug, thiserror::Error)]
 pub enum PeopleError {
@@ -116,6 +119,7 @@ impl PeopleRepository {
             name: name.clone(),
             created_at: now.clone(),
             updated_at: now,
+            notes: None,
         };
         let inserted = sqlx::query(
             "INSERT INTO people (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
@@ -180,6 +184,189 @@ impl PeopleRepository {
             .await?;
         tx.commit().await?;
         Ok(deleted.rows_affected() > 0)
+    }
+
+    pub async fn get_person(pool: &SqlitePool, person_id: &str) -> Result<Option<Person>, PeopleError> {
+        let mut conn = pool.acquire().await?;
+        Ok(Self::find_person_by_id(&mut conn, person_id).await?)
+    }
+
+    /// Save notes for a person. Blank notes clear the field.
+    pub async fn update_person_notes(
+        pool: &SqlitePool,
+        person_id: &str,
+        notes: Option<&str>,
+    ) -> Result<Person, PeopleError> {
+        let notes = notes.map(str::trim).filter(|n| !n.is_empty());
+        if notes.map_or(false, |n| n.chars().count() > MAX_NOTES_LEN) {
+            return invalid(format!("Notes are too long (max {} characters)", MAX_NOTES_LEN));
+        }
+
+        let mut conn = pool.acquire().await?;
+        let updated = sqlx::query("UPDATE people SET notes = ?, updated_at = ? WHERE id = ?")
+            .bind(notes)
+            .bind(Utc::now().to_rfc3339())
+            .bind(person_id)
+            .execute(&mut *conn)
+            .await?;
+        if updated.rows_affected() == 0 {
+            return invalid("Person not found");
+        }
+        match Self::find_person_by_id(&mut conn, person_id).await? {
+            Some(person) => Ok(person),
+            None => invalid("Person not found"),
+        }
+    }
+
+    /// Every meeting this person spoke in (newest first) with how much they said.
+    pub async fn list_person_meetings(
+        pool: &SqlitePool,
+        person_id: &str,
+    ) -> Result<Vec<PersonMeeting>, PeopleError> {
+        let meetings = sqlx::query_as::<_, PersonMeeting>(
+            r#"SELECT m.id AS meeting_id, m.title, m.created_at, m.folder_id,
+                      COUNT(t.id) AS line_count,
+                      MIN(t.audio_start_time) AS first_line_start
+               FROM meeting_speakers ms
+               JOIN meetings m ON m.id = ms.meeting_id
+               LEFT JOIN transcripts t ON t.meeting_id = ms.meeting_id AND t.speaker = ms.speaker_key
+               WHERE ms.person_id = ?
+               GROUP BY m.id, m.title, m.created_at, m.folder_id
+               ORDER BY m.created_at DESC"#,
+        )
+        .bind(person_id)
+        .fetch_all(pool)
+        .await?;
+        Ok(meetings)
+    }
+
+    pub async fn get_person_detail(
+        pool: &SqlitePool,
+        person_id: &str,
+    ) -> Result<PersonDetail, PeopleError> {
+        let Some(person) = Self::get_person(pool, person_id).await? else {
+            return invalid("Person not found");
+        };
+        let meetings = Self::list_person_meetings(pool, person_id).await?;
+        Ok(PersonDetail { person, meetings })
+    }
+
+    /// What this person said across all meetings, newest meeting first, optionally filtered by text.
+    ///
+    /// Filtering happens here rather than in SQL because SQLite only folds ASCII case, which would
+    /// miss "ПРИВІТ" for a query of "привіт".
+    pub async fn list_person_lines(
+        pool: &SqlitePool,
+        person_id: &str,
+        query: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<PersonLine>, PeopleError> {
+        let lines = sqlx::query_as::<_, PersonLine>(
+            r#"SELECT t.id AS transcript_id, t.meeting_id,
+                      m.title AS meeting_title, m.created_at AS meeting_created_at,
+                      t.transcript AS text, t.audio_start_time
+               FROM transcripts t
+               JOIN meeting_speakers ms ON ms.meeting_id = t.meeting_id AND ms.speaker_key = t.speaker
+               JOIN meetings m ON m.id = t.meeting_id
+               WHERE ms.person_id = ?
+               ORDER BY m.created_at DESC, t.audio_start_time ASC
+               LIMIT ?"#,
+        )
+        .bind(person_id)
+        .bind(MAX_LINES_SCANNED)
+        .fetch_all(pool)
+        .await?;
+
+        let needle = query.map(str::trim).filter(|q| !q.is_empty()).map(str::to_lowercase);
+        Ok(lines
+            .into_iter()
+            .filter(|line| needle.as_ref().map_or(true, |n| line.text.to_lowercase().contains(n)))
+            .take(limit)
+            .collect())
+    }
+
+    /// Meetings where someone whose name contains `query` spoke. Powers "search by person".
+    pub async fn search_meetings_by_person(
+        pool: &SqlitePool,
+        query: &str,
+    ) -> Result<Vec<PersonMeetingHit>, PeopleError> {
+        let needle = query.trim().to_lowercase();
+        if needle.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let people: Vec<(String, String)> = sqlx::query_as("SELECT id, name FROM people")
+            .fetch_all(pool)
+            .await?;
+
+        let mut hits = Vec::new();
+        for (id, name) in people.into_iter().filter(|(_, n)| n.to_lowercase().contains(&needle)).take(20) {
+            let rows: Vec<(String, String)> = sqlx::query_as(
+                r#"SELECT m.id, m.title
+                   FROM meeting_speakers ms JOIN meetings m ON m.id = ms.meeting_id
+                   WHERE ms.person_id = ?
+                   GROUP BY m.id, m.title
+                   ORDER BY m.created_at DESC"#,
+            )
+            .bind(&id)
+            .fetch_all(pool)
+            .await?;
+            hits.extend(rows.into_iter().map(|(meeting_id, title)| PersonMeetingHit {
+                meeting_id,
+                title,
+                person_name: name.clone(),
+            }));
+        }
+        Ok(hits)
+    }
+
+    /// Fold a duplicate person into another ("Maj Smith" / "Major Smith"): all their speaker slots
+    /// move over, notes are combined, and the duplicate is removed. Returns the surviving person.
+    pub async fn merge_people(
+        pool: &SqlitePool,
+        from_id: &str,
+        into_id: &str,
+    ) -> Result<Person, PeopleError> {
+        if from_id == into_id {
+            return invalid("Choose two different people to merge");
+        }
+
+        let mut tx = pool.begin().await?;
+        let (Some(from), Some(into)) = (
+            Self::find_person_by_id(&mut tx, from_id).await?,
+            Self::find_person_by_id(&mut tx, into_id).await?,
+        ) else {
+            return invalid("Person not found");
+        };
+
+        sqlx::query("UPDATE meeting_speakers SET person_id = ? WHERE person_id = ?")
+            .bind(into_id)
+            .bind(from_id)
+            .execute(&mut *tx)
+            .await?;
+
+        let notes = match (into.notes.as_deref(), from.notes.as_deref()) {
+            (Some(a), Some(b)) if a != b => Some(format!("{}\n\n(From {}) {}", a, from.name, b)),
+            (Some(a), _) => Some(a.to_string()),
+            (None, b) => b.map(str::to_string),
+        };
+        sqlx::query("UPDATE people SET notes = ?, updated_at = ? WHERE id = ?")
+            .bind(notes)
+            .bind(Utc::now().to_rfc3339())
+            .bind(into_id)
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("DELETE FROM people WHERE id = ?")
+            .bind(from_id)
+            .execute(&mut *tx)
+            .await?;
+
+        let merged = Self::find_person_by_id(&mut tx, into_id).await?;
+        tx.commit().await?;
+        match merged {
+            Some(person) => Ok(person),
+            None => invalid("Person not found"),
+        }
     }
 
     // -------------------------------------------------------------- speakers
@@ -595,5 +782,110 @@ mod tests {
         // Wildcards in the query are literal, not patterns.
         assert_eq!(PeopleRepository::list_people(&pool, Some("_100%")).await.unwrap().len(), 1);
         assert_eq!(PeopleRepository::list_people(&pool, Some("%")).await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn notes_round_trip_and_blank_clears() {
+        let pool = test_pool().await;
+        let p = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        assert_eq!(p.notes, None);
+        let p = PeopleRepository::update_person_notes(&pool, &p.id, Some("  Liaison, J2 shop \n")).await.unwrap();
+        assert_eq!(p.notes.as_deref(), Some("Liaison, J2 shop"));
+        let p = PeopleRepository::update_person_notes(&pool, &p.id, Some("   ")).await.unwrap();
+        assert_eq!(p.notes, None, "blank notes clear the field");
+        assert!(PeopleRepository::update_person_notes(&pool, &p.id, Some(&"x".repeat(MAX_NOTES_LEN + 1))).await.is_err());
+        assert!(PeopleRepository::update_person_notes(&pool, "nope", Some("x")).await.is_err());
+    }
+
+    async fn add_meeting_on(pool: &SqlitePool, id: &str, created: &str) {
+        sqlx::query("INSERT INTO meetings (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)")
+            .bind(id).bind(format!("Meeting {}", id)).bind(created).bind(created)
+            .execute(pool).await.unwrap();
+    }
+
+    async fn add_line_text(pool: &SqlitePool, id: &str, meeting_id: &str, start: f64, speaker: &str, text: &str) {
+        sqlx::query("INSERT INTO transcripts (id, meeting_id, transcript, timestamp, audio_start_time, speaker) VALUES (?, ?, ?, '10:00', ?, ?)")
+            .bind(id).bind(meeting_id).bind(text).bind(start).bind(speaker)
+            .execute(pool).await.unwrap();
+    }
+
+    /// Two meetings; Ana is S1 in both (one meeting also has her split across S1 and S3), Ben is S2.
+    async fn seeded() -> (SqlitePool, Person, Person) {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        add_meeting_on(&pool, "m2", "2026-10-02T10:00:00Z").await;
+        add_line_text(&pool, "a1", "m1", 5.0, "S1", "Привіт усім, починаємо зустріч").await;
+        add_line_text(&pool, "b1", "m1", 9.0, "S2", "Budget is ready").await;
+        add_line_text(&pool, "a2", "m1", 12.0, "S3", "Ще одне речення від Ани").await;
+        add_line_text(&pool, "a3", "m2", 3.0, "S1", "Second meeting, still me").await;
+        add_line_text(&pool, "b2", "m2", 8.0, "S2", "And me again").await;
+        let ana = PeopleRepository::get_or_create_person(&pool, "Оксана Коваль").await.unwrap();
+        let ben = PeopleRepository::get_or_create_person(&pool, "Ben Okoye").await.unwrap();
+        for (m, key, who) in [("m1", "S1", &ana), ("m1", "S3", &ana), ("m1", "S2", &ben), ("m2", "S1", &ana), ("m2", "S2", &ben)] {
+            PeopleRepository::set_speaker_person(&pool, m, key, Some(&who.id)).await.unwrap();
+        }
+        (pool, ana, ben)
+    }
+
+    #[tokio::test]
+    async fn a_persons_meetings_are_newest_first_with_their_line_counts() {
+        let (pool, ana, ben) = seeded().await;
+        let meetings = PeopleRepository::list_person_meetings(&pool, &ana.id).await.unwrap();
+        let summary: Vec<_> = meetings.iter().map(|m| (m.meeting_id.as_str(), m.line_count, m.first_line_start)).collect();
+        // m1: S1 + S3 both belong to her (2 lines, first at 5s); m2: 1 line
+        assert_eq!(summary, [("m2", 1, Some(3.0)), ("m1", 2, Some(5.0))]);
+        let ben_meetings = PeopleRepository::list_person_meetings(&pool, &ben.id).await.unwrap();
+        assert_eq!(ben_meetings.iter().map(|m| m.line_count).collect::<Vec<_>>(), [1, 1]);
+        let detail = PeopleRepository::get_person_detail(&pool, &ana.id).await.unwrap();
+        assert_eq!(detail.person.name, "Оксана Коваль");
+        assert!(PeopleRepository::get_person_detail(&pool, "nope").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn what_a_person_said_is_searchable_in_any_script_and_excludes_others() {
+        let (pool, ana, _) = seeded().await;
+        let all = PeopleRepository::list_person_lines(&pool, &ana.id, None, 100).await.unwrap();
+        assert_eq!(all.len(), 3, "only Ana's lines, across both of her slots");
+        assert!(all.iter().all(|l| l.text != "Budget is ready" && l.text != "And me again"));
+        assert_eq!(all[0].meeting_id, "m2", "newest meeting first");
+
+        // Uppercase query still finds the capitalised Cyrillic line (SQLite alone could not)
+        let hits = PeopleRepository::list_person_lines(&pool, &ana.id, Some("ЗУСТРІЧ"), 100).await.unwrap();
+        assert_eq!(hits.iter().map(|l| l.transcript_id.as_str()).collect::<Vec<_>>(), ["a1"]);
+        assert_eq!(PeopleRepository::list_person_lines(&pool, &ana.id, None, 2).await.unwrap().len(), 2, "limit applies");
+        assert!(PeopleRepository::list_person_lines(&pool, &ana.id, Some("budget"), 100).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn searching_by_name_finds_that_persons_meetings() {
+        let (pool, _, _) = seeded().await;
+        let hits = PeopleRepository::search_meetings_by_person(&pool, "оксан").await.unwrap();
+        assert_eq!(hits.iter().map(|h| h.meeting_id.as_str()).collect::<Vec<_>>(), ["m2", "m1"]);
+        assert_eq!(hits[0].person_name, "Оксана Коваль");
+        let hits = PeopleRepository::search_meetings_by_person(&pool, "  OKOYE ").await.unwrap();
+        assert_eq!(hits.len(), 2);
+        assert!(PeopleRepository::search_meetings_by_person(&pool, "   ").await.unwrap().is_empty());
+        assert!(PeopleRepository::search_meetings_by_person(&pool, "zzz").await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn merging_two_people_moves_everything_and_combines_notes() {
+        let (pool, ana, ben) = seeded().await;
+        PeopleRepository::update_person_notes(&pool, &ana.id, Some("J2 liaison")).await.unwrap();
+        PeopleRepository::update_person_notes(&pool, &ben.id, Some("Visiting from AFRICOM")).await.unwrap();
+
+        let merged = PeopleRepository::merge_people(&pool, &ben.id, &ana.id).await.unwrap();
+        assert_eq!(merged.id, ana.id);
+        assert_eq!(merged.notes.as_deref(), Some("J2 liaison\n\n(From Ben Okoye) Visiting from AFRICOM"));
+        assert!(PeopleRepository::get_person(&pool, &ben.id).await.unwrap().is_none());
+        // Ana now owns Ben's slots too, so she is in the same two meetings with all five lines
+        let meetings = PeopleRepository::list_person_meetings(&pool, &ana.id).await.unwrap();
+        assert_eq!(meetings.iter().map(|m| m.line_count).sum::<i64>(), 5);
+        // Speaker names in the meeting reflect the merge
+        let speakers = PeopleRepository::get_meeting_speakers(&pool, "m1").await.unwrap();
+        assert!(speakers.iter().all(|s| s.person_name.as_deref() == Some("Оксана Коваль")));
+
+        assert!(PeopleRepository::merge_people(&pool, &ana.id, &ana.id).await.is_err());
+        assert!(PeopleRepository::merge_people(&pool, "nope", &ana.id).await.is_err());
     }
 }
