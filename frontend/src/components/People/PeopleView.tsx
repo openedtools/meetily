@@ -9,8 +9,7 @@ import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/Sidebar/SidebarProvider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
-import { VisuallyHidden } from '@/components/ui/visually-hidden';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import type { Person, PersonDetail, PersonLine, PersonSummary } from '@/types';
 
 const LINE_LIMIT = 100;
@@ -56,53 +55,6 @@ function Highlight({ text, query }: { text: string; query: string }) {
         ),
       )}
     </>
-  );
-}
-
-function ConfirmDialog({
-  title,
-  body,
-  confirmLabel,
-  destructive,
-  onConfirm,
-  onClose,
-}: {
-  title: string;
-  body: string;
-  confirmLabel: string;
-  destructive?: boolean;
-  onConfirm: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-[425px]">
-        <VisuallyHidden>
-          <DialogTitle>{title}</DialogTitle>
-        </VisuallyHidden>
-        <div className="py-4">
-          <h3 className="text-lg font-semibold mb-3">{title}</h3>
-          <p className="text-sm text-gray-600">{body}</p>
-        </div>
-        <DialogFooter>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className={cn(
-              'px-4 py-2 text-sm font-medium text-white rounded-md transition-colors',
-              destructive ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700',
-            )}
-          >
-            {confirmLabel}
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 

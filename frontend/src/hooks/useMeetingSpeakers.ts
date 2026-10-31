@@ -21,6 +21,8 @@ export interface MeetingSpeakersApi {
   mergeSpeakers: (fromKey: string, intoKey: string) => Promise<boolean>;
   /** Remove a speaker; its lines become unlabelled. */
   removeSpeaker: (speakerKey: string) => Promise<boolean>;
+  /** Re-read speakers and people from the backend (e.g. after automatic detection). */
+  reload: () => Promise<void>;
 }
 
 type PatchTranscripts = (update: (transcript: Transcript) => Transcript) => void;
@@ -49,22 +51,20 @@ export function useMeetingSpeakers(
     }
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    setSpeakers([]);
-    (async () => {
-      try {
-        const loaded = await invoke<MeetingSpeaker[]>('api_get_meeting_speakers', { meetingId });
-        if (!cancelled) setSpeakers(loaded);
-      } catch (error) {
-        console.error('Failed to load speakers:', error);
-      }
-    })();
-    void refreshPeople();
-    return () => {
-      cancelled = true;
-    };
+  const reload = useCallback(async () => {
+    try {
+      const loaded = await invoke<MeetingSpeaker[]>('api_get_meeting_speakers', { meetingId });
+      if (activeMeetingRef.current === meetingId) setSpeakers(loaded);
+    } catch (error) {
+      console.error('Failed to load speakers:', error);
+    }
+    await refreshPeople();
   }, [meetingId, refreshPeople]);
+
+  useEffect(() => {
+    setSpeakers([]);
+    void reload();
+  }, [reload]);
 
   // Run a backend call that returns the meeting's fresh speaker list.
   const run = useCallback(
@@ -163,5 +163,5 @@ export function useMeetingSpeakers(
     [meetingId, run, patchTranscripts],
   );
 
-  return { meetingId, speakers, people, nameSpeaker, moveLine, addSpeaker, mergeSpeakers, removeSpeaker };
+  return { meetingId, speakers, people, nameSpeaker, moveLine, addSpeaker, mergeSpeakers, removeSpeaker, reload };
 }

@@ -198,6 +198,17 @@ export interface PersonDetail {
   meetings: PersonMeeting[];
 }
 
+export interface SpeakerModelStatus {
+  downloaded: boolean;
+  size_bytes: number;
+}
+
+export interface DetectSpeakersResult {
+  speakers: MeetingSpeaker[];
+  lines_labeled: number;
+  lines_total: number;
+}
+
 export interface MeetingSpeaker {
   speaker_key: string; // "S1", "S2", ...
   person_id: string | null;

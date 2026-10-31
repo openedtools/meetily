@@ -118,7 +118,7 @@ function ModeTab({ active, onClick, children }: { active: boolean; onClick: () =
 }
 
 /** Pick or type a name for the whole speaker. Typed names are saved and reused next time. */
-function NamePanel({
+export function NamePanel({
   speakerKey,
   lineCount,
   onDone,

@@ -7,6 +7,7 @@ import { Copy, FolderOpen, RefreshCw } from 'lucide-react';
 import Analytics from '@/lib/analytics';
 import { RetranscribeDialog } from './RetranscribeDialog';
 import { useConfig } from '@/contexts/ConfigContext';
+import { SpeakersMenu } from '@/components/Speakers/SpeakersMenu';
 
 
 interface TranscriptButtonGroupProps {
@@ -68,6 +69,14 @@ export function TranscriptButtonGroup({
           <FolderOpen className="@[22rem]:mr-2" size={18} />
           <span className="hidden @[22rem]:inline">Recording</span>
         </Button>
+
+        {meetingId && (
+          <SpeakersMenu
+            meetingId={meetingId}
+            meetingFolderPath={meetingFolderPath}
+            onRefetchTranscripts={onRefetchTranscripts}
+          />
+        )}
 
         {betaFeatures.importAndRetranscribe && meetingId && meetingFolderPath && (
           <Button
