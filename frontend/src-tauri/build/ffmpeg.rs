@@ -3,6 +3,48 @@
 // ============================================================================
 // Download and bundle FFmpeg binaries at build-time to eliminate runtime download delays
 
+use sha2::{Digest, Sha256};
+
+// ----------------------------------------------------------------------------
+// Integrity pins
+// ----------------------------------------------------------------------------
+// This binary is bundled into the installer and run on every recording, so a swapped download would
+// run on the build machine and on every user's machine. Where a pin exists, a download or cached file
+// that does not match it exactly is rejected. Platforms without a pin behave as before.
+//
+// Windows: FFmpeg 8.0.1 "essentials" build (Gyan Doshi's), fingerprints taken from the file as
+// downloaded from the URL below. Re-pin deliberately if the URL or version is ever changed.
+const WINDOWS_ARCHIVE_SHA256: &str = "e2aaeaa0fdbc397d4794828086424d4aaa2102cef1fb6874f6ffd29c0b88b673";
+const WINDOWS_ARCHIVE_SIZE: u64 = 106_259_850;
+const WINDOWS_BINARY_SHA256: &str = "5af82a0d4fe2b9eae211b967332ea97edfc51c6b328ca35b827e73eac560dc0d";
+
+/// (archive SHA-256, archive size in bytes) if this target's download is pinned.
+fn pinned_archive(target: &str) -> Option<(&'static str, u64)> {
+    target.contains("windows").then_some((WINDOWS_ARCHIVE_SHA256, WINDOWS_ARCHIVE_SIZE))
+}
+
+/// SHA-256 of the extracted ffmpeg binary if this target is pinned.
+fn pinned_binary_sha256(target: &str) -> Option<&'static str> {
+    target.contains("windows").then_some(WINDOWS_BINARY_SHA256)
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn sha256_file_hex(path: &std::path::Path) -> Result<String, String> {
+    let bytes = std::fs::read(path).map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+    Ok(sha256_hex(&bytes))
+}
+
+/// Does the binary at `path` match the pin for `target`? Unpinned targets always pass.
+fn binary_matches_pin(target: &str, path: &std::path::Path) -> bool {
+    match pinned_binary_sha256(target) {
+        None => true,
+        Some(expected) => sha256_file_hex(path).map_or(false, |actual| actual == expected),
+    }
+}
+
 /// Download and bundle FFmpeg binary for current target platform
 /// Checks cache first, downloads only if missing or corrupted
 pub fn ensure_ffmpeg_binary() {
@@ -26,7 +68,11 @@ pub fn ensure_ffmpeg_binary() {
     // Cache check: Skip download if binary exists and works
     if binary_path.exists() {
         println!("cargo:warning=🔍 Found cached FFmpeg binary: {}", binary_name);
-        if verify_ffmpeg_binary(&binary_path) {
+        // A pinned binary must match its fingerprint before it is ever executed
+        if !binary_matches_pin(&target, &binary_path) {
+            println!("cargo:warning=⚠️  Cached FFmpeg binary does not match the expected fingerprint, discarding and re-downloading...");
+            let _ = std::fs::remove_file(&binary_path);
+        } else if verify_ffmpeg_binary(&binary_path) {
             println!("cargo:warning=✅ FFmpeg binary already cached and verified: {}", binary_name);
             return;
         } else {
@@ -47,6 +93,12 @@ pub fn ensure_ffmpeg_binary() {
     match download_and_extract_ffmpeg(&target, &binary_path) {
         Ok(()) => {
             println!("cargo:warning=✅ FFmpeg binary downloaded successfully: {}", binary_name);
+
+            // Never execute a binary that is not the pinned one
+            if !binary_matches_pin(&target, &binary_path) {
+                let _ = std::fs::remove_file(&binary_path);
+                panic!("⚠️  Extracted FFmpeg binary does not match its expected SHA-256; it was deleted and not run!");
+            }
 
             // Verify downloaded binary works
             if !verify_ffmpeg_binary(&binary_path) {
@@ -91,6 +143,28 @@ fn download_and_extract_ffmpeg(
     let total_size = response.content_length().unwrap_or(0);
     println!("cargo:warning=📦 Download size: {:.1} MB", total_size as f64 / 1_048_576.0);
 
+    // Read the whole archive and check it against the pin BEFORE anything is written or unpacked
+    let content = response.bytes().map_err(|e| format!("Failed to read response: {}", e))?;
+    if let Some((expected_sha256, expected_size)) = pinned_archive(target) {
+        if content.len() as u64 != expected_size {
+            return Err(format!(
+                "FFmpeg download has the wrong size ({} bytes, expected {}). It was rejected.",
+                content.len(),
+                expected_size
+            ));
+        }
+        let actual = sha256_hex(&content);
+        if actual != expected_sha256 {
+            return Err(format!(
+                "FFmpeg download failed its integrity check (SHA-256 {} does not match the pinned {}). It was rejected.",
+                actual, expected_sha256
+            ));
+        }
+        println!("cargo:warning=🔒 FFmpeg download matches its pinned SHA-256");
+    } else {
+        println!("cargo:warning=⚠️  No integrity pin for FFmpeg on {}; the download is not verified", target);
+    }
+
     // Download to temp file
     let temp_dir = std::env::temp_dir();
     let archive_filename = url.split('/').last().unwrap_or("ffmpeg-archive");
@@ -99,9 +173,6 @@ fn download_and_extract_ffmpeg(
     {
         let mut file = std::fs::File::create(&archive_path)
             .map_err(|e| format!("Failed to create temp file: {}", e))?;
-
-        let content = response.bytes()
-            .map_err(|e| format!("Failed to read response: {}", e))?;
 
         file.write_all(&content)
             .map_err(|e| format!("Failed to write archive: {}", e))?;
