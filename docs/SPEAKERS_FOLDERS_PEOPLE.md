@@ -33,3 +33,14 @@ Features added in this fork on top of Meetily v0.4.1.
 ## Checking accuracy on your own recordings
 `cargo test --lib speaker_accuracy -- --ignored --nocapture` and `... voice_memory ...` run the real pipeline on a
 folder of recordings with known speakers. See `frontend/src-tauri/src/diarization/accuracy_check.rs`.
+
+## Building a shareable Windows installer
+Run `frontend\build_installer_windows.bat` (needs Node, pnpm, Rust and the Visual Studio C++ Build Tools).
+It builds a single NSIS `.exe` installer and prints where it is. The build is CPU-only and not code-signed, so
+Windows SmartScreen will say "Windows protected your PC" on first run: choose *More info* then *Run anyway*.
+
+This fork's `tauri.conf.json` differs from upstream in two ways: update checks look at
+`github.com/openedtools/meetily` instead of the original project (so the app is never offered the stock build
+as an "update"), and updater artifacts are not generated (that needs the original project's signing key).
+Installing replaces a stock Meetily install (same app id) and keeps its data. When uninstalling the old version,
+leave "delete application data" **unticked**.
