@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronRight, File, Folder, FolderOpen, FolderPlus, Settings, ChevronLeftCircle, ChevronRightCircle, Calendar, StickyNote, Home, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, SearchIcon, X, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, File, Folder, FolderOpen, FolderPlus, Users, Settings, ChevronLeftCircle, ChevronRightCircle, Calendar, StickyNote, Home, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, SearchIcon, X, Upload } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSidebar } from './SidebarProvider';
 import type { CurrentMeeting, SidebarItem } from '@/components/Sidebar/SidebarProvider';
@@ -465,6 +465,21 @@ const Sidebar: React.FC = () => {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                onClick={() => router.push('/people')}
+                className={`p-2 rounded-lg transition-colors duration-150 ${pathname === '/people' ? 'bg-gray-100' : 'hover:bg-gray-100'
+                  }`}
+              >
+                <Users className="w-5 h-5 text-gray-600" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>People</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
                 onClick={handleRecordingToggle}
                 disabled={isRecording}
                 className={`p-2 ${isRecording ? 'bg-red-500 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'} rounded-full transition-colors duration-150 shadow-sm`}
@@ -546,7 +561,8 @@ const Sidebar: React.FC = () => {
     // While searching, folders with hits open themselves so the matches are visible
     const isExpanded = expandedFolders.has(item.id) || (!!searchQuery.trim() && !!item.userFolder);
     const paddingLeft = `${depth * 12 + 12}px`;
-    const isActive = item.type === 'file' && currentMeeting?.id === item.id;
+    // The last-opened meeting is not "active" while the People page is showing
+    const isActive = item.type === 'file' && currentMeeting?.id === item.id && pathname !== '/people';
     const isMeetingItem = item.id.includes('-') && !item.id.startsWith('intro-call');
 
     // Check if this item has a matching transcript snippet
@@ -764,6 +780,15 @@ const Sidebar: React.FC = () => {
               >
                 <Home className="w-4 h-4 mr-2" />
                 <span>Home</span>
+              </div>
+            )}
+            {!isCollapsed && (
+              <div
+                onClick={() => router.push('/people')}
+                className={`p-3 text-lg font-semibold items-center hover:bg-gray-100 h-10 flex mx-3 mt-1 rounded-lg cursor-pointer ${pathname === '/people' ? 'bg-gray-100' : ''}`}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                <span>People</span>
               </div>
             )}
           </div>

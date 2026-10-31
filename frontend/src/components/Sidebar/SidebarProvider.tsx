@@ -272,7 +272,23 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 
 
       const results = await invoke('api_search_transcripts', { query }) as TranscriptSearchResult[];
-      setSearchResults(results);
+
+      // Also surface meetings where someone whose name matches spoke. Optional: a failure
+      // here must not hide the normal transcript results.
+      let withPerson: TranscriptSearchResult[] = [];
+      try {
+        const hits = await invoke('api_search_meetings_by_person', { query }) as Array<{
+          meeting_id: string; title: string; person_name: string;
+        }>;
+        const alreadyListed = new Set(results.map(r => r.id));
+        withPerson = (hits ?? [])
+          .filter(h => !alreadyListed.has(h.meeting_id))
+          .map(h => ({ id: h.meeting_id, title: h.title, matchContext: `With ${h.person_name}`, timestamp: '' }));
+      } catch (personError) {
+        console.error('Error searching by person:', personError);
+      }
+
+      setSearchResults([...results, ...withPerson]);
     } catch (error) {
       console.error('Error searching transcripts:', error);
       setSearchResults([]);

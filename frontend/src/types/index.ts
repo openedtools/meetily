@@ -165,6 +165,7 @@ export interface Person {
   name: string;
   created_at: string;
   updated_at: string;
+  notes: string | null;
 }
 
 export interface PersonSummary {
@@ -172,6 +173,29 @@ export interface PersonSummary {
   name: string;
   meeting_count: number;
   last_meeting_at: string | null;
+}
+
+export interface PersonMeeting {
+  meeting_id: string;
+  title: string;
+  created_at: string;
+  folder_id: string | null;
+  line_count: number;
+  first_line_start: number | null; // seconds from recording start
+}
+
+export interface PersonLine {
+  transcript_id: string;
+  meeting_id: string;
+  meeting_title: string;
+  meeting_created_at: string;
+  text: string;
+  audio_start_time: number | null;
+}
+
+export interface PersonDetail {
+  person: Person;
+  meetings: PersonMeeting[];
 }
 
 export interface MeetingSpeaker {
