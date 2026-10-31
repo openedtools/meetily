@@ -26,7 +26,8 @@ pub fn cosine_distances(embeddings: &[Vec<f32>]) -> Vec<f32> {
     for i in 0..n {
         for j in (i + 1)..n {
             let dot: f32 = embeddings[i].iter().zip(&embeddings[j]).map(|(a, b)| a * b).sum();
-            let d = (1.0 - dot).max(0.0);
+            // f32::max ignores NaN, which would turn an unusable embedding into "identical to everything"
+            let d = if dot.is_finite() { (1.0 - dot).max(0.0) } else { 2.0 };
             dist[i * n + j] = d;
             dist[j * n + i] = d;
         }
@@ -256,6 +257,15 @@ mod tests {
         let (items, _) = blobs(1, 25, 0.25, 9);
         let tree = average_linkage(&cosine_distances(&items), items.len());
         assert_eq!(estimate_num_speakers(&tree, 8), 1);
+    }
+
+    #[test]
+    fn unusable_embeddings_are_far_from_everything_not_identical() {
+        let items = vec![vec![1.0, 0.0], vec![f32::NAN, 0.0], vec![0.0, 1.0]];
+        let d = cosine_distances(&items);
+        assert_eq!(d[1], 2.0, "NaN is maximally distant");
+        assert_eq!(d[3], 2.0);
+        assert!(d.iter().all(|x| x.is_finite()));
     }
 
     #[test]

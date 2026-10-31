@@ -74,17 +74,18 @@ struct DownloadProgress {
 /// Is the on-device voice model already downloaded?
 #[tauri::command]
 pub async fn speaker_model_status<R: Runtime>(app: AppHandle<R>) -> Result<SpeakerModelStatus, String> {
-    Ok(SpeakerModelStatus {
-        downloaded: model::is_downloaded(&models_dir(&app)?),
-        size_bytes: model::MODEL_SIZE_BYTES,
-    })
+    let dir = models_dir(&app)?;
+    // Full checksum, not just presence: a wrong file counts as "not downloaded" so the UI offers a fresh one
+    let downloaded = tokio::task::spawn_blocking(move || model::is_verified(&dir)).await.unwrap_or(false);
+    Ok(SpeakerModelStatus { downloaded, size_bytes: model::MODEL_SIZE_BYTES })
 }
 
 /// One-time download of the voice model (about 26 MB). Emits `speaker-model-download-progress`.
 #[tauri::command]
 pub async fn speaker_model_download<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
     let dir = models_dir(&app)?;
-    if model::is_downloaded(&dir) {
+    let verified_dir = dir.clone();
+    if tokio::task::spawn_blocking(move || model::is_verified(&verified_dir)).await.unwrap_or(false) {
         return Ok(());
     }
     let Some(_busy) = Busy::acquire(&DOWNLOADING) else {
@@ -143,8 +144,9 @@ pub async fn api_detect_speakers<R: Runtime>(
     let audio_path = find_audio_file(Path::new(&folder)).map_err(|e| e.to_string())?;
 
     let models = models_dir(&app)?;
-    if !model::is_downloaded(&models) {
-        return Err("The speaker model has not been downloaded yet".to_string());
+    let verified_dir = models.clone();
+    if !tokio::task::spawn_blocking(move || model::is_verified(&verified_dir)).await.unwrap_or(false) {
+        return Err("The speaker model is missing or is not the expected file. Open Detect speakers again to download it.".to_string());
     }
     let model_path = model::model_path(&models);
 

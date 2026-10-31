@@ -44,7 +44,22 @@ pub struct Labeling {
     pub voices: Vec<Option<Voice>>,
 }
 
+/// Keep only embeddings the clustering can trust: finite, non-zero, and all the same length.
+fn usable_lines(lines: &[LineInput]) -> Vec<LineInput> {
+    let dim = lines.iter().filter_map(|l| l.embedding.as_ref()).find(|e| !e.is_empty()).map(Vec::len);
+    lines
+        .iter()
+        .map(|line| LineInput {
+            duration: if line.duration.is_finite() { line.duration.max(0.0) } else { 0.0 },
+            embedding: line.embedding.clone().filter(|e| {
+                Some(e.len()) == dim && e.iter().all(|v| v.is_finite()) && e.iter().any(|v| *v != 0.0)
+            }),
+        })
+        .collect()
+}
+
 pub fn assign_speakers(lines: &[LineInput], opts: &Options) -> Labeling {
+    let lines = &usable_lines(lines);
     if lines.is_empty() {
         return Labeling { labels: Vec::new(), num_speakers: 0, voices: Vec::new() };
     }
@@ -284,5 +299,25 @@ mod tests {
         let (lines, _) = conversation(&TURNS, 0.1, 10, |_| 0.5);
         let result = assign_speakers(&lines, &Options::default());
         assert!(result.voices.iter().all(|v| v.is_some()));
+    }
+
+    #[test]
+    fn corrupt_embeddings_are_ignored_instead_of_trusted_or_crashing() {
+        let (mut lines, truth) = conversation(&TURNS, 0.1, 11, |_| 3.0);
+        lines[2].embedding = Some(vec![f32::NAN; 16]); // model produced garbage
+        lines[5].embedding = Some(vec![0.0; 16]); // silent / degenerate
+        lines[7].embedding = Some(vec![1.0; 3]); // wrong dimension (a different model)
+        lines[9].duration = f64::NAN;
+        let result = assign_speakers(&lines, &Options::default());
+        assert_eq!(result.labels.len(), lines.len());
+        assert_eq!(result.num_speakers, 3);
+        // Every healthy line is still grouped correctly
+        let healthy: Vec<usize> = (0..lines.len()).filter(|i| ![2, 5, 7, 9].contains(i)).collect();
+        for &i in &healthy {
+            for &j in &healthy {
+                assert_eq!(result.labels[i] == result.labels[j], truth[i] == truth[j], "lines {i} and {j}");
+            }
+        }
+        assert!(result.voices.iter().flatten().all(|(v, _)| v.iter().all(|x| x.is_finite())));
     }
 }

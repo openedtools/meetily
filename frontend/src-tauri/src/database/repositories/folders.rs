@@ -20,7 +20,7 @@ fn invalid<T>(msg: impl Into<String>) -> Result<T, FolderError> {
 
 /// Collapse runs of whitespace and reject empty or oversized names.
 fn normalize_name(name: &str) -> Result<String, FolderError> {
-    let cleaned = name.split_whitespace().collect::<Vec<_>>().join(" ");
+    let cleaned = super::people::clean_single_line(name);
     if cleaned.is_empty() {
         return invalid("Folder name cannot be empty");
     }
@@ -292,5 +292,19 @@ mod tests {
         FoldersRepository::move_meeting(&pool, "m1", Some(&folder.id)).await.unwrap();
         sqlx::query("DELETE FROM meetings WHERE id = 'm1'").execute(&pool).await.unwrap();
         assert_eq!(FoldersRepository::list_folders(&pool).await.unwrap()[0].meeting_count, 0);
+    }
+
+    #[tokio::test]
+    async fn folder_names_cannot_hide_behind_invisible_characters_or_carry_sql() {
+        let pool = test_pool().await;
+        let real = FoldersRepository::create_folder(&pool, "Project X").await.unwrap();
+        for sneaky in ["Project\u{200B} X", "\u{202E}Project X", "Project X\u{0000}"] {
+            assert!(FoldersRepository::create_folder(&pool, sneaky).await.is_err(), "{sneaky:?} duplicated an existing folder");
+        }
+        assert!(FoldersRepository::create_folder(&pool, "\u{200B}\u{202E}").await.is_err());
+        let nasty = FoldersRepository::create_folder(&pool, "x'); DROP TABLE folders; --").await.unwrap();
+        assert_eq!(nasty.name, "x'); DROP TABLE folders; --");
+        assert_eq!(FoldersRepository::list_folders(&pool).await.unwrap().len(), 2);
+        assert_eq!(FoldersRepository::rename_folder(&pool, &real.id, "Proj\u{202E}ect Y").await.unwrap().name, "Project Y");
     }
 }

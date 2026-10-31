@@ -13,6 +13,17 @@ use std::path::Path;
 /// Audio shorter than this carries too little voice to measure reliably.
 pub const MIN_EMBED_SECS: f64 = 0.4;
 
+/// Audio is meant to be in [-1, 1]; anything else (NaN, infinity, wild amplitudes from a corrupt or
+/// hostile file) would turn into NaN features and poison the clustering, so it is neutralised.
+pub(crate) fn sanitize_samples(samples: &[f32]) -> std::borrow::Cow<'_, [f32]> {
+    if samples.iter().all(|s| s.is_finite() && s.abs() <= 1.0) {
+        return std::borrow::Cow::Borrowed(samples);
+    }
+    std::borrow::Cow::Owned(
+        samples.iter().map(|&s| if s.is_finite() { s.clamp(-1.0, 1.0) } else { 0.0 }).collect(),
+    )
+}
+
 pub struct SpeakerEmbedder {
     session: Session,
     fbank: Fbank,
@@ -34,6 +45,8 @@ impl SpeakerEmbedder {
 
     /// Voice embedding (unit length) for 16 kHz mono samples in [-1, 1], or `None` if too short.
     pub fn embed(&mut self, samples: &[f32]) -> Result<Option<Vec<f32>>> {
+        let samples = sanitize_samples(samples);
+        let samples = samples.as_ref();
         let frames = num_frames(samples.len());
         if (samples.len() as f64) < MIN_EMBED_SECS * SAMPLE_RATE as f64 || frames == 0 {
             return Ok(None);
@@ -56,6 +69,30 @@ impl SpeakerEmbedder {
             .get(self.output_name.as_str())
             .ok_or_else(|| anyhow!("Speaker model output '{}' not found", self.output_name))?
             .try_extract_array::<f32>()?;
-        Ok(Some(normalized(embedding.iter().copied().collect())))
+        let embedding: Vec<f32> = embedding.iter().copied().collect();
+        // A model that returns NaN/inf for some clip must not feed the clustering
+        if embedding.is_empty() || embedding.iter().any(|v| !v.is_finite()) {
+            return Ok(None);
+        }
+        Ok(Some(normalized(embedding)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clean_audio_is_passed_through_untouched() {
+        let clean = [0.0, 0.5, -1.0, 1.0];
+        assert!(matches!(sanitize_samples(&clean), std::borrow::Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn nan_infinity_and_out_of_range_samples_are_neutralised() {
+        let hostile = [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 1e30, -1e30, 0.25];
+        let safe = sanitize_samples(&hostile);
+        assert_eq!(safe.as_ref(), &[0.0, 0.0, 0.0, 1.0, -1.0, 0.25]);
+        assert!(safe.iter().all(|s| s.is_finite() && s.abs() <= 1.0));
     }
 }

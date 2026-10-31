@@ -5,6 +5,8 @@ use uuid::Uuid;
 
 const MAX_NAME_LEN: usize = 120;
 const MAX_NOTES_LEN: usize = 20_000;
+/// A meeting never has anywhere near this many speakers; larger numbers are corrupt or hostile input.
+const MAX_DETECTED_SPEAKERS: usize = 1_000;
 /// Upper bound on lines scanned for one person; keeps a text search over a very large history quick.
 const MAX_LINES_SCANNED: i64 = 50_000;
 /// Voices at least this alike are offered as a name suggestion. Measured: the same person across
@@ -58,9 +60,36 @@ fn invalid<T>(msg: impl Into<String>) -> Result<T, PeopleError> {
     Err(PeopleError::Invalid(msg.into()))
 }
 
-/// Collapse runs of whitespace and reject empty or oversized names.
+/// Characters with no visible glyph that can be used to forge or mislead: control characters,
+/// zero-width spaces/joiners, soft hyphens, byte-order marks, and the bidirectional overrides and
+/// isolates that make text display in a different order than it is stored.
+fn is_invisible(c: char) -> bool {
+    c.is_control()
+        || matches!(
+            c,
+            '\u{00AD}' | '\u{061C}' | '\u{180E}' | '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}'
+                | '\u{2060}'..='\u{2064}' | '\u{2066}'..='\u{2069}' | '\u{FEFF}'
+        )
+}
+
+/// One line of text: whitespace collapsed to single spaces and invisible characters removed, so a
+/// name cannot hide behind zero-width characters or reorder itself with text-direction overrides.
+pub(crate) fn clean_single_line(text: &str) -> String {
+    text.split_whitespace()
+        .map(|word| word.chars().filter(|c| !is_invisible(*c)).collect::<String>())
+        .filter(|word| !word.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Free text: line breaks and tabs are kept, other invisible characters are dropped.
+fn clean_notes(text: &str) -> String {
+    text.chars().filter(|c| matches!(c, '\n' | '\t') || !is_invisible(*c)).collect()
+}
+
+/// Collapse runs of whitespace, drop invisible characters, and reject empty or oversized names.
 fn normalize_name(name: &str) -> Result<String, PeopleError> {
-    let cleaned = name.split_whitespace().collect::<Vec<_>>().join(" ");
+    let cleaned = clean_single_line(name);
     if cleaned.is_empty() {
         return invalid("Name cannot be empty");
     }
@@ -237,7 +266,8 @@ impl PeopleRepository {
         person_id: &str,
         notes: Option<&str>,
     ) -> Result<Person, PeopleError> {
-        let notes = notes.map(str::trim).filter(|n| !n.is_empty());
+        let cleaned_notes = notes.map(clean_notes);
+        let notes = cleaned_notes.as_deref().map(str::trim).filter(|n| !n.is_empty());
         if notes.map_or(false, |n| n.chars().count() > MAX_NOTES_LEN) {
             return invalid(format!("Notes are too long (max {} characters)", MAX_NOTES_LEN));
         }
@@ -683,12 +713,21 @@ impl PeopleRepository {
         .into_iter()
         .collect();
 
+        // Results computed from an older transcript (it was re-transcribed or lines were deleted while
+        // detection ran) must not be applied: that would wipe the current speakers and their names.
+        let current: Vec<&(String, Option<usize>)> =
+            assignments.iter().filter(|(id, _)| old_label_of_line.contains_key(id)).collect();
+        if !assignments.is_empty() && current.is_empty() {
+            return invalid("The transcript changed while speakers were being detected. Please run detection again.");
+        }
+        let assignments = current;
+
         // How many of each new speaker's lines belonged to each named old speaker
         let mut lines_of: HashMap<usize, usize> = HashMap::new();
         let mut overlap: HashMap<(usize, String), usize> = HashMap::new();
-        for (line_id, label) in assignments {
+        for (line_id, label) in assignments.iter().map(|a| (&a.0, &a.1)) {
             let Some(label) = label else { continue };
-            if speaker_number(&format!("S{}", label + 1)).is_none() {
+            if *label >= MAX_DETECTED_SPEAKERS {
                 return invalid("Detected speaker number is out of range");
             }
             *lines_of.entry(*label).or_default() += 1;
@@ -737,7 +776,7 @@ impl PeopleRepository {
             .execute(&mut *tx)
             .await?;
         }
-        for (line_id, label) in assignments {
+        for (line_id, label) in assignments.iter().map(|a| (&a.0, &a.1)) {
             if let Some(label) = label {
                 sqlx::query("UPDATE transcripts SET speaker = ? WHERE id = ? AND meeting_id = ?")
                     .bind(format!("S{}", label + 1))
@@ -1385,5 +1424,87 @@ mod tests {
         let s = PeopleRepository::suggest_people_for_meeting(&pool, "m2").await.unwrap();
         assert_eq!(s.len(), 1);
         assert!((s[0].similarity - std::f32::consts::FRAC_1_SQRT_2).abs() < 1e-3, "similarity {}", s[0].similarity);
+    }
+
+    // ---- red team: hostile input
+
+    #[tokio::test]
+    async fn names_cannot_hide_behind_invisible_or_text_direction_characters() {
+        let pool = test_pool().await;
+        let real = PeopleRepository::get_or_create_person(&pool, "Maj Smith").await.unwrap();
+        // zero-width space, zero-width joiner, soft hyphen, BOM, NUL and a right-to-left override
+        for sneaky in ["Maj\u{200B} Smith", "Maj Smi\u{200D}th", "\u{FEFF}Maj Smith", "Maj Smith\u{0000}", "\u{202E}Maj Smith", "Maj\u{00AD} Smith"] {
+            let found = PeopleRepository::get_or_create_person(&pool, sneaky).await.unwrap();
+            assert_eq!(found.id, real.id, "{sneaky:?} must not create a look-alike duplicate");
+            assert_eq!(found.name, "Maj Smith");
+        }
+        assert!(PeopleRepository::get_or_create_person(&pool, "\u{200B}\u{202E}\u{0000}").await.is_err(), "a name of only invisible characters is empty");
+        let renamed = PeopleRepository::rename_person(&pool, &real.id, "Maj\u{202E}or Smith").await.unwrap();
+        assert_eq!(renamed.name, "Major Smith");
+        // Ordinary multi-script names are untouched
+        assert_eq!(PeopleRepository::get_or_create_person(&pool, "Оксана  Коваль").await.unwrap().name, "Оксана Коваль");
+        assert_eq!(PeopleRepository::get_or_create_person(&pool, "José García").await.unwrap().name, "José García");
+    }
+
+    #[tokio::test]
+    async fn notes_drop_control_characters_but_keep_line_breaks() {
+        let pool = test_pool().await;
+        let p = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        let saved = PeopleRepository::update_person_notes(&pool, &p.id, Some("Line one\n\tindented\u{0000}\u{202E}tail\u{0007}")).await.unwrap();
+        assert_eq!(saved.notes.as_deref(), Some("Line one\n\tindentedtail"));
+    }
+
+    #[tokio::test]
+    async fn sql_looking_text_is_stored_and_searched_as_plain_text() {
+        let pool = test_pool().await;
+        let nasty = "Robert'); DROP TABLE people; --";
+        let p = PeopleRepository::get_or_create_person(&pool, nasty).await.unwrap();
+        assert_eq!(p.name, nasty);
+        PeopleRepository::update_person_notes(&pool, &p.id, Some("'; DELETE FROM meetings; --")).await.unwrap();
+        // The tables are intact and the text is found literally
+        assert_eq!(PeopleRepository::list_people(&pool, Some("DROP TABLE")).await.unwrap().len(), 1);
+        assert_eq!(PeopleRepository::list_people(&pool, Some("'); ")).await.unwrap().len(), 1);
+        assert_eq!(PeopleRepository::list_people(&pool, Some("%")).await.unwrap().len(), 0, "wildcards are literal");
+        assert_eq!(PeopleRepository::list_people(&pool, Some("\\")).await.unwrap().len(), 0);
+        assert!(PeopleRepository::search_meetings_by_person(&pool, "x') OR ('1'='1").await.unwrap().is_empty());
+        let (n,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM people").fetch_one(&pool).await.unwrap();
+        assert_eq!(n, 1);
+    }
+
+    #[tokio::test]
+    async fn speaker_keys_cannot_carry_sql_or_oversized_numbers() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        for bad in ["S1'); DROP TABLE meeting_speakers; --", "S99999999999999999999", "S1 OR 1=1", "../S1", "S٣"] {
+            assert!(PeopleRepository::set_speaker_person(&pool, "m1", bad, None).await.is_err(), "{bad:?} accepted");
+        }
+        let (n,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM meeting_speakers").fetch_one(&pool).await.unwrap();
+        assert_eq!(n, 0);
+    }
+
+    #[tokio::test]
+    async fn an_absurd_detected_speaker_number_is_an_error_not_a_panic() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        add_line_text(&pool, "a1", "m1", 0.0, "", "x").await;
+        for label in [usize::MAX, usize::MAX - 1, u32::MAX as usize + 5] {
+            let result = PeopleRepository::apply_detected_speakers(&pool, "m1", &assign(&[("a1", Some(label))]), &[]).await;
+            assert!(result.is_err(), "label {label} should be rejected");
+        }
+    }
+
+    #[tokio::test]
+    async fn stale_detection_results_cannot_wipe_a_meetings_names() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        add_line_text(&pool, "a1", "m1", 0.0, "S1", "x").await;
+        let ana = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", "S1", Some(&ana.id)).await.unwrap();
+        // The transcript was replaced (e.g. re-transcribed) while detection ran: none of its line ids exist any more
+        let result = PeopleRepository::apply_detected_speakers(&pool, "m1", &assign(&[("gone-1", Some(0)), ("gone-2", Some(1))]), &[]).await;
+        assert!(result.is_err());
+        let speakers = PeopleRepository::get_meeting_speakers(&pool, "m1").await.unwrap();
+        assert_eq!(speakers.len(), 1, "existing speakers survive");
+        assert_eq!(speakers[0].person_name.as_deref(), Some("Ana"), "and keep their name");
     }
 }
