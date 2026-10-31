@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { AlertCircle, CheckCircle2, Download, Loader2, Users } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Download, Loader2, Sparkles, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
+import { useMeetingSpeakersContext } from '@/contexts/MeetingSpeakersContext';
 import type { DetectSpeakersResult, SpeakerModelStatus } from '@/types';
 
 interface DetectSpeakersDialogProps {
@@ -58,7 +59,9 @@ export function DetectSpeakersDialog({
   const [download, setDownload] = useState<{ downloaded: number; total: number } | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
+  const speakersCtx = useMeetingSpeakersContext();
   const [count, setCount] = useState<string>('auto');
+  const [rememberVoices, setRememberVoices] = useState(true);
   const [phase, setPhase] = useState<Phase>('idle');
   const [progress, setProgress] = useState<DetectionProgress | null>(null);
   const [result, setResult] = useState<DetectSpeakersResult | null>(null);
@@ -126,6 +129,7 @@ export function DetectSpeakersDialog({
       const detected = await invoke<DetectSpeakersResult>('api_detect_speakers', {
         meetingId,
         numSpeakers: count === 'auto' ? null : Number(count),
+        rememberVoices,
       });
       setResult(detected);
       setPhase('done');
@@ -217,6 +221,21 @@ export function DetectSpeakersDialog({
                   mistaken for one person.
                 </p>
               </div>
+              <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberVoices}
+                  disabled={isRunning}
+                  onChange={(e) => setRememberVoices(e.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  Remember these voices to suggest names in future meetings
+                  <span className="block text-xs text-gray-500">
+                    Kept only on this computer. You can erase anyone&rsquo;s voice from the People page.
+                  </span>
+                </span>
+              </label>
               {hasSpeakers && (
                 <p className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md p-2">
                   This replaces the current speaker labels. Names you have already given stay with the voices that
@@ -248,6 +267,44 @@ export function DetectSpeakersDialog({
                 {result.lines_labeled} lines. Click a speaker label in the transcript to give them a name. If two
                 people were mixed up, run it again and set the number of people.
               </div>
+            </div>
+          )}
+
+          {phase === 'done' && speakersCtx && speakersCtx.suggestions.some((s) => s.is_best) && (
+            <div className="border border-blue-200 bg-blue-50/50 rounded-md p-3 space-y-2">
+              <p className="text-sm font-medium text-gray-800 flex items-center">
+                <Sparkles className="w-4 h-4 mr-2 text-blue-600" />
+                These voices sound familiar
+              </p>
+              <ul className="space-y-1">
+                {speakersCtx.suggestions.filter((s) => s.is_best).map((s) => {
+                  const speaker = speakersCtx.speakers.find((x) => x.speaker_key === s.speaker_key);
+                  return (
+                    <li key={s.speaker_key} className="flex items-center gap-2 text-sm">
+                      <span className="flex-1 min-w-0 truncate">
+                        {speaker ? `Speaker ${s.speaker_key.slice(1)}` : s.speaker_key} sounds like{' '}
+                        <strong>{s.person_name}</strong>{' '}
+                        <span className={s.strength === 'likely' ? 'text-green-600' : 'text-amber-600'}>({s.strength})</span>
+                      </span>
+                      <button
+                        onClick={() => void speakersCtx.acceptSuggestion(s.speaker_key, s.person_id)}
+                        className="flex-shrink-0 px-2 py-0.5 text-xs font-medium text-blue-700 bg-white hover:bg-blue-100 border border-blue-200 rounded"
+                        aria-label={`Accept ${s.person_name} for Speaker ${s.speaker_key.slice(1)}`}
+                      >
+                        Accept
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              {speakersCtx.suggestions.filter((s) => s.is_best).length > 1 && (
+                <button
+                  onClick={() => void speakersCtx.acceptAllSuggestions()}
+                  className="text-xs font-medium text-blue-700 hover:underline"
+                >
+                  Accept all
+                </button>
+              )}
             </div>
           )}
 

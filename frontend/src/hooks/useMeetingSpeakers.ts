@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
-import type { AssignSpeakerResult, MeetingSpeaker, PersonSummary, Transcript } from '@/types';
+import type { AssignSpeakerResult, MeetingSpeaker, PersonSummary, SpeakerSuggestion, Transcript } from '@/types';
 
 /** Who a speaker should be named: an existing person, or a name typed for the first time. */
 export type SpeakerTarget = { personId: string } | { newName: string } | null;
@@ -23,6 +23,12 @@ export interface MeetingSpeakersApi {
   removeSpeaker: (speakerKey: string) => Promise<boolean>;
   /** Re-read speakers and people from the backend (e.g. after automatic detection). */
   reload: () => Promise<void>;
+  /** Guesses for who unnamed speakers are, from voices remembered in other meetings. */
+  suggestions: SpeakerSuggestion[];
+  /** Name a speaker as the person a suggestion points to. */
+  acceptSuggestion: (speakerKey: string, personId: string) => Promise<boolean>;
+  /** Accept the best suggestion for every speaker that has one. */
+  acceptAllSuggestions: () => Promise<void>;
 }
 
 type PatchTranscripts = (update: (transcript: Transcript) => Transcript) => void;
@@ -40,6 +46,7 @@ export function useMeetingSpeakers(
 ): MeetingSpeakersApi {
   const [speakers, setSpeakers] = useState<MeetingSpeaker[]>([]);
   const [people, setPeople] = useState<PersonSummary[]>([]);
+  const [suggestions, setSuggestions] = useState<SpeakerSuggestion[]>([]);
   const activeMeetingRef = useRef(meetingId);
   activeMeetingRef.current = meetingId;
 
@@ -51,6 +58,16 @@ export function useMeetingSpeakers(
     }
   }, []);
 
+  // Suggestions are a convenience: failing to load them must never get in the way
+  const refreshSuggestions = useCallback(async () => {
+    try {
+      const found = await invoke<SpeakerSuggestion[]>('api_get_speaker_suggestions', { meetingId });
+      if (activeMeetingRef.current === meetingId) setSuggestions(found ?? []);
+    } catch (error) {
+      console.error('Failed to load name suggestions:', error);
+    }
+  }, [meetingId]);
+
   const reload = useCallback(async () => {
     try {
       const loaded = await invoke<MeetingSpeaker[]>('api_get_meeting_speakers', { meetingId });
@@ -58,11 +75,12 @@ export function useMeetingSpeakers(
     } catch (error) {
       console.error('Failed to load speakers:', error);
     }
-    await refreshPeople();
-  }, [meetingId, refreshPeople]);
+    await Promise.all([refreshPeople(), refreshSuggestions()]);
+  }, [meetingId, refreshPeople, refreshSuggestions]);
 
   useEffect(() => {
     setSpeakers([]);
+    setSuggestions([]);
     void reload();
   }, [reload]);
 
@@ -92,14 +110,15 @@ export function useMeetingSpeakers(
         });
         if (activeMeetingRef.current === meetingId) setSpeakers(result.speakers);
         // A new name joins the dropdown immediately; counts for others refresh too.
-        await refreshPeople();
+        // Naming also changes which speakers are still unnamed, hence the suggestions.
+        await Promise.all([refreshPeople(), refreshSuggestions()]);
         return true;
       } catch (error) {
         toast.error('Could not name this speaker', { description: String(error) });
         return false;
       }
     },
-    [meetingId, refreshPeople],
+    [meetingId, refreshPeople, refreshSuggestions],
   );
 
   const moveLine = useCallback(
@@ -143,10 +162,11 @@ export function useMeetingSpeakers(
       );
       if (ok) {
         patchTranscripts?.((t) => (t.speaker === fromKey ? { ...t, speaker: intoKey } : t));
+        void refreshSuggestions();
       }
       return ok;
     },
-    [meetingId, run, patchTranscripts],
+    [meetingId, run, patchTranscripts, refreshSuggestions],
   );
 
   const removeSpeaker = useCallback(
@@ -157,11 +177,37 @@ export function useMeetingSpeakers(
       );
       if (ok) {
         patchTranscripts?.((t) => (t.speaker === speakerKey ? { ...t, speaker: undefined } : t));
+        void refreshSuggestions();
       }
       return ok;
     },
-    [meetingId, run, patchTranscripts],
+    [meetingId, run, patchTranscripts, refreshSuggestions],
   );
 
-  return { meetingId, speakers, people, nameSpeaker, moveLine, addSpeaker, mergeSpeakers, removeSpeaker, reload };
+  const acceptSuggestion = useCallback(
+    (speakerKey: string, personId: string) => nameSpeaker(speakerKey, { personId }),
+    [nameSpeaker],
+  );
+
+  const acceptAllSuggestions = useCallback(async () => {
+    // One at a time: each naming changes what is left to suggest
+    for (const suggestion of suggestions.filter((s) => s.is_best)) {
+      await nameSpeaker(suggestion.speaker_key, { personId: suggestion.person_id });
+    }
+  }, [suggestions, nameSpeaker]);
+
+  return {
+    meetingId,
+    speakers,
+    people,
+    nameSpeaker,
+    moveLine,
+    addSpeaker,
+    mergeSpeakers,
+    removeSpeaker,
+    reload,
+    suggestions,
+    acceptSuggestion,
+    acceptAllSuggestions,
+  };
 }

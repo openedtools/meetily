@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Merge, ScanSearch, Trash2, Users } from 'lucide-react';
+import { Merge, ScanSearch, Sparkles, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,7 @@ export function SpeakersMenu({ meetingId, meetingFolderPath, onRefetchTranscript
 
   if (!ctx) return null;
   const { speakers } = ctx;
+  const bestSuggestions = ctx.suggestions.filter((s) => s.is_best);
 
   const nameOf = (key: string) => speakerDisplayName(key, speakers.find((s) => s.speaker_key === key));
 
@@ -92,6 +93,28 @@ export function SpeakersMenu({ meetingId, meetingFolderPath, onRefetchTranscript
                         {s.segment_count} {s.segment_count === 1 ? 'line' : 'lines'}
                       </span>
                     </button>
+                    {!isExpanded && !s.person_id && (() => {
+                      const best = bestSuggestions.find((b) => b.speaker_key === s.speaker_key);
+                      return best ? (
+                        <div className="px-4 pb-2 -mt-1 flex items-center gap-2 text-xs text-gray-600">
+                          <Sparkles className="w-3 h-3 flex-shrink-0 text-blue-600" />
+                          <span className="flex-1 min-w-0 truncate">
+                            Sounds like <strong className="text-gray-800">{best.person_name}</strong>
+                            {' '}
+                            <span className={best.strength === 'likely' ? 'text-green-600' : 'text-amber-600'}>
+                              ({best.strength})
+                            </span>
+                          </span>
+                          <button
+                            onClick={() => void ctx.acceptSuggestion(best.speaker_key, best.person_id)}
+                            className="flex-shrink-0 px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded"
+                            aria-label={`Name ${nameOf(s.speaker_key)} as ${best.person_name}`}
+                          >
+                            Accept
+                          </button>
+                        </div>
+                      ) : null;
+                    })()}
                     {isExpanded && (
                       <div className="border-t border-gray-100 bg-gray-50/60">
                         <NamePanel speakerKey={s.speaker_key} lineCount={s.segment_count} onDone={() => setExpandedKey(null)} />
@@ -132,7 +155,16 @@ export function SpeakersMenu({ meetingId, meetingFolderPath, onRefetchTranscript
             </ul>
           )}
 
-          <div className="p-3 border-t">
+          <div className="p-3 border-t space-y-2">
+            {bestSuggestions.length > 0 && (
+              <button
+                onClick={() => void ctx.acceptAllSuggestions()}
+                className="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Accept {bestSuggestions.length === 1 ? 'suggested name' : `${bestSuggestions.length} suggested names`}
+              </button>
+            )}
             <button
               onClick={openDetect}
               className="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md"

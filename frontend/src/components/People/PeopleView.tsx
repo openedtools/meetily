@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
-import { Check, Merge, Pencil, Search, Trash2, User, Users, X } from 'lucide-react';
+import { AudioLines, Check, Merge, Pencil, Search, Trash2, User, Users, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/Sidebar/SidebarProvider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -182,7 +182,7 @@ function PersonPanel({
   const [lines, setLines] = useState<PersonLine[]>([]);
 
   const [mergeOpen, setMergeOpen] = useState(false);
-  const [confirm, setConfirm] = useState<{ kind: 'merge'; target: PersonSummary } | { kind: 'delete' } | null>(null);
+  const [confirm, setConfirm] = useState<{ kind: 'merge'; target: PersonSummary } | { kind: 'delete' } | { kind: 'forget' } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -265,6 +265,17 @@ function PersonPanel({
       onSelect(target.id);
     } catch (error) {
       toast.error('Could not merge', { description: String(error) });
+    }
+  };
+
+  const doForgetVoice = async () => {
+    setConfirm(null);
+    try {
+      await invoke<number>('api_forget_person_voice', { personId });
+      setDetail((current) => (current ? { ...current, voice_meetings: 0 } : current));
+      toast.success('Voice forgotten');
+    } catch (error) {
+      toast.error('Could not forget this voice', { description: String(error) });
     }
   };
 
@@ -401,6 +412,29 @@ function PersonPanel({
         />
       </section>
 
+      {/* Voice memory */}
+      <section className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <AudioLines className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold text-gray-700">Voice memory</h3>
+            <p className="text-sm text-gray-500 mt-0.5" data-testid="voice-memory-status">
+              {detail.voice_meetings > 0
+                ? `Remembered from ${plural(detail.voice_meetings, 'meeting')}, so ${person.name} can be suggested in future meetings. Stored only on this computer.`
+                : `No voice remembered yet. When you name ${person.name} in a meeting whose speakers were detected automatically, their voice is remembered.`}
+            </p>
+          </div>
+          {detail.voice_meetings > 0 && (
+            <button
+              onClick={() => setConfirm({ kind: 'forget' })}
+              className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 border border-red-200 rounded-md"
+            >
+              Forget voice
+            </button>
+          )}
+        </div>
+      </section>
+
       {/* Meetings */}
       <section className="bg-white border border-gray-200 rounded-lg">
         <h3 className="text-sm font-semibold text-gray-700 px-4 pt-4 pb-2">Meetings</h3>
@@ -484,6 +518,16 @@ function PersonPanel({
           body={`Credit all of ${person.name}'s meetings and notes to ${confirm.target.name}, and remove ${person.name} from your people? This cannot be undone.`}
           confirmLabel="Merge"
           onConfirm={() => void doMerge(confirm.target)}
+          onClose={() => setConfirm(null)}
+        />
+      )}
+      {confirm?.kind === 'forget' && (
+        <ConfirmDialog
+          title="Forget voice"
+          body={`Erase the remembered voice of ${person.name}? They stay in your people and meetings; they just will not be suggested automatically any more.`}
+          confirmLabel="Forget"
+          destructive
+          onConfirm={() => void doForgetVoice()}
           onClose={() => setConfirm(null)}
         />
       )}

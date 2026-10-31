@@ -196,6 +196,7 @@ export interface PersonLine {
 export interface PersonDetail {
   person: Person;
   meetings: PersonMeeting[];
+  voice_meetings: number; // in how many meetings their voice is remembered
 }
 
 export interface SpeakerModelStatus {
@@ -203,10 +204,21 @@ export interface SpeakerModelStatus {
   size_bytes: number;
 }
 
+export interface SpeakerSuggestion {
+  speaker_key: string;
+  person_id: string;
+  person_name: string;
+  similarity: number; // cosine similarity of the voices
+  strength: 'likely' | 'possible';
+  meetings: number; // how many meetings the remembered voice comes from
+  is_best: boolean; // the one to offer first for this speaker
+}
+
 export interface DetectSpeakersResult {
   speakers: MeetingSpeaker[];
   lines_labeled: number;
   lines_total: number;
+  suggestions: SpeakerSuggestion[];
 }
 
 export interface MeetingSpeaker {

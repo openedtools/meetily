@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState } from 'react';
-import { Check, Plus, User, UserPlus, UserX } from 'lucide-react';
+import { Check, Plus, Sparkles, User, UserPlus, UserX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/command';
 import { useMeetingSpeakersContext } from '@/contexts/MeetingSpeakersContext';
 import { speakerColorClasses, speakerDisplayName } from '@/lib/speakers';
+import { similarPeople } from '@/lib/names';
 
 type Mode = 'name' | 'line';
 
@@ -43,6 +44,10 @@ export const SpeakerChip = memo(function SpeakerChip({ transcriptId, speakerKey,
 
   const speaker = speakerKey ? ctx.speakers.find((s) => s.speaker_key === speakerKey) : undefined;
   const label = speakerKey ? speakerDisplayName(speakerKey, speaker) : 'Assign speaker';
+  // An unnamed speaker whose voice matches someone named in an earlier meeting
+  const familiar = speakerKey && !speaker?.person_id
+    ? ctx.suggestions.find((s) => s.speaker_key === speakerKey && s.is_best)
+    : undefined;
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
@@ -59,9 +64,10 @@ export const SpeakerChip = memo(function SpeakerChip({ transcriptId, speakerKey,
           'transition-colors hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400',
           speakerColorClasses(speakerKey),
         )}
-        title="Click to name this speaker or change this line's speaker"
+        title={familiar ? `Sounds like ${familiar.person_name}. Click to confirm or name this speaker` : "Click to name this speaker or change this line's speaker"}
       >
         <span className="truncate">{label}</span>
+        {familiar && <Sparkles className="ml-1 h-3 w-3 flex-shrink-0" aria-label={`Sounds like ${familiar.person_name}`} />}
       </button>
     ) : (
       <button
@@ -132,6 +138,10 @@ export function NamePanel({
   const speaker = ctx.speakers.find((s) => s.speaker_key === speakerKey);
   const typed = query.trim().replace(/\s+/g, ' ');
   const exactMatch = ctx.people.some((p) => p.name.toLowerCase() === typed.toLowerCase());
+  // Voices that match someone named in another meeting (only for speakers still unnamed)
+  const suggested = speaker?.person_id ? [] : ctx.suggestions.filter((s) => s.speaker_key === speakerKey);
+  // Names close to what was typed, so "Major Smith" finds "Maj Smith" instead of adding a duplicate
+  const similar = typed && !exactMatch ? similarPeople(typed, ctx.people) : [];
 
   const choose = async (target: Parameters<typeof ctx.nameSpeaker>[1]) => {
     if (await ctx.nameSpeaker(speakerKey, target)) onDone();
@@ -143,6 +153,40 @@ export function NamePanel({
       <CommandList>
         {/* Once something is typed there is always an "Add" or a match, so only hint when empty */}
         {!typed && <CommandEmpty>No one saved yet — type a name</CommandEmpty>}
+        {suggested.length > 0 && (
+          <CommandGroup heading="Sounds like">
+            {suggested.map((s) => (
+              <CommandItem
+                key={s.person_id}
+                value={`__suggested__${s.person_name}`}
+                onSelect={() => choose({ personId: s.person_id })}
+                title={`Voice match from ${s.meetings} earlier ${s.meetings === 1 ? 'meeting' : 'meetings'} (similarity ${Math.round(s.similarity * 100)}%)`}
+              >
+                <Sparkles className="mr-2 h-4 w-4 text-blue-600" />
+                <span className="flex-1 truncate">{s.person_name}</span>
+                <span className={cn('ml-2 text-xs', s.strength === 'likely' ? 'text-green-600' : 'text-amber-600')}>
+                  {s.strength === 'likely' ? 'Likely' : 'Possible'}
+                </span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {similar.length > 0 && (
+          // Force-mounted: these deliberately do not match the typed text, so cmdk would hide them
+          <CommandGroup forceMount heading="Did you mean">
+            {similar.map((p) => (
+              <CommandItem
+                forceMount
+                key={p.id}
+                value={`__similar__${p.name}`}
+                onSelect={() => choose({ personId: p.id })}
+              >
+                <User className="mr-2 h-4 w-4 text-gray-500" />
+                <span className="truncate">{p.name}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
         {typed && !exactMatch && (
           // The group must be force-mounted too, or cmdk hides it when no person matches the text
           <CommandGroup forceMount>
