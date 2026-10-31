@@ -1,4 +1,4 @@
-use crate::people::models::{MeetingSpeaker, Person, PersonDetail, PersonLine, PersonMeeting, PersonMeetingHit, PersonSummary};
+use crate::people::models::{MeetingSpeaker, Person, PersonDetail, PersonLine, PersonMeeting, PersonMeetingHit, PersonSummary, SpeakerSuggestion};
 use chrono::Utc;
 use sqlx::{Error as SqlxError, SqliteConnection, SqlitePool};
 use uuid::Uuid;
@@ -7,6 +7,43 @@ const MAX_NAME_LEN: usize = 120;
 const MAX_NOTES_LEN: usize = 20_000;
 /// Upper bound on lines scanned for one person; keeps a text search over a very large history quick.
 const MAX_LINES_SCANNED: i64 = 50_000;
+/// Voices at least this alike are offered as a name suggestion. Measured: the same person across
+/// separate recordings scored 0.66-0.97 (even through reverb and a phone-band codec); different
+/// people mostly scored below 0.45, and only deliberately similar synthetic voices reached 0.57.
+pub const MIN_SUGGESTION_SIMILARITY: f32 = 0.55;
+/// At or above this a match is called "likely" rather than "possible".
+pub const STRONG_SUGGESTION_SIMILARITY: f32 = 0.70;
+const MAX_SUGGESTIONS_PER_SPEAKER: usize = 3;
+
+/// An embedding as stored: little-endian f32 values.
+fn encode_voice(embedding: &[f32]) -> Vec<u8> {
+    embedding.iter().flat_map(|v| v.to_le_bytes()).collect()
+}
+
+fn decode_voice(bytes: &[u8]) -> Vec<f32> {
+    bytes.chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect()
+}
+
+/// Cosine similarity, or `None` when the embeddings cannot be compared (different models).
+fn voice_similarity(a: &[f32], b: &[f32]) -> Option<f32> {
+    if a.is_empty() || a.len() != b.len() {
+        return None;
+    }
+    let dot: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
+    let norms = (a.iter().map(|x| x * x).sum::<f32>() * b.iter().map(|x| x * x).sum::<f32>()).sqrt();
+    (norms > 0.0).then(|| dot / norms)
+}
+
+/// Weighted average of two voices (weights = number of lines each came from), unit length.
+fn blend_voices(a: (&[f32], i64), b: (&[f32], i64)) -> Vec<f32> {
+    if a.0.len() != b.0.len() {
+        return if a.1 >= b.1 { a.0.to_vec() } else { b.0.to_vec() };
+    }
+    let (wa, wb) = (a.1.max(1) as f32, b.1.max(1) as f32);
+    let mixed: Vec<f32> = a.0.iter().zip(b.0).map(|(x, y)| x * wa + y * wb).collect();
+    let norm = mixed.iter().map(|x| x * x).sum::<f32>().sqrt();
+    if norm > 0.0 { mixed.iter().map(|x| x / norm).collect() } else { mixed }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum PeopleError {
@@ -174,10 +211,13 @@ impl PeopleRepository {
     /// Remove a person. Their speaker slots stay in each meeting, back to "Speaker N".
     pub async fn delete_person(pool: &SqlitePool, person_id: &str) -> Result<bool, PeopleError> {
         let mut tx = pool.begin().await?;
-        sqlx::query("UPDATE meeting_speakers SET person_id = NULL WHERE person_id = ?")
-            .bind(person_id)
-            .execute(&mut *tx)
-            .await?;
+        // Their speaker slots stay as "Speaker N", without the voice that identified them
+        sqlx::query(
+            "UPDATE meeting_speakers SET person_id = NULL, voiceprint = NULL, voiceprint_lines = NULL WHERE person_id = ?",
+        )
+        .bind(person_id)
+        .execute(&mut *tx)
+        .await?;
         let deleted = sqlx::query("DELETE FROM people WHERE id = ?")
             .bind(person_id)
             .execute(&mut *tx)
@@ -248,7 +288,13 @@ impl PeopleRepository {
             return invalid("Person not found");
         };
         let meetings = Self::list_person_meetings(pool, person_id).await?;
-        Ok(PersonDetail { person, meetings })
+        let (voice_meetings,): (i64,) = sqlx::query_as(
+            "SELECT COUNT(DISTINCT meeting_id) FROM meeting_speakers WHERE person_id = ? AND voiceprint IS NOT NULL",
+        )
+        .bind(person_id)
+        .fetch_one(pool)
+        .await?;
+        Ok(PersonDetail { person, meetings, voice_meetings })
     }
 
     /// What this person said across all meetings, newest meeting first, optionally filtered by text.
@@ -550,6 +596,33 @@ impl PeopleRepository {
             .execute(&mut *tx)
             .await?;
 
+        // Two halves of one person: their voice is the blend of both
+        let voices: Vec<(String, Option<Vec<u8>>, Option<i64>)> = sqlx::query_as(
+            "SELECT speaker_key, voiceprint, voiceprint_lines FROM meeting_speakers WHERE meeting_id = ? AND speaker_key IN (?, ?)",
+        )
+        .bind(meeting_id)
+        .bind(from_key)
+        .bind(into_key)
+        .fetch_all(&mut *tx)
+        .await?;
+        let voice_of = |key: &str| {
+            voices.iter().find(|(k, _, _)| k == key).and_then(|(_, bytes, lines)| {
+                bytes.as_ref().map(|b| (decode_voice(b), lines.unwrap_or(1)))
+            })
+        };
+        let merged_voice = match (voice_of(into_key), voice_of(from_key)) {
+            (Some(a), Some(b)) => Some((blend_voices((&a.0, a.1), (&b.0, b.1)), a.1 + b.1)),
+            (None, Some(b)) => Some(b),
+            (a, None) => a,
+        };
+        sqlx::query("UPDATE meeting_speakers SET voiceprint = ?, voiceprint_lines = ? WHERE meeting_id = ? AND speaker_key = ?")
+            .bind(merged_voice.as_ref().map(|(v, _)| encode_voice(v)))
+            .bind(merged_voice.as_ref().map(|(_, n)| *n))
+            .bind(meeting_id)
+            .bind(into_key)
+            .execute(&mut *tx)
+            .await?;
+
         // Keep the name if only the slot being folded away had one.
         if let Some((Some(person_id),)) = from_person {
             sqlx::query(
@@ -580,10 +653,14 @@ impl PeopleRepository {
     /// leave the line unlabelled). Speakers become "S1", "S2", ... in that order. Names the user
     /// already gave are not lost: a new speaker inherits a person when at least half of its lines
     /// were previously that person's, and one person is never given to two speakers.
+    ///
+    /// `voices[n]` is speaker `n`'s average voice. It is kept on the speaker so later meetings can
+    /// suggest who it is; pass an empty slice to remember nothing.
     pub async fn apply_detected_speakers(
         pool: &SqlitePool,
         meeting_id: &str,
         assignments: &[(String, Option<usize>)],
+        voices: &[Option<(Vec<f32>, usize)>],
     ) -> Result<Vec<MeetingSpeaker>, PeopleError> {
         use std::collections::{HashMap, HashSet};
 
@@ -645,14 +722,20 @@ impl PeopleRepository {
         let mut labels: Vec<usize> = lines_of.keys().copied().collect();
         labels.sort_unstable();
         for label in labels {
-            sqlx::query("INSERT INTO meeting_speakers (id, meeting_id, speaker_key, person_id, created_at) VALUES (?, ?, ?, ?, ?)")
-                .bind(format!("speaker-{}", Uuid::new_v4()))
-                .bind(meeting_id)
-                .bind(format!("S{}", label + 1))
-                .bind(carried.get(&label))
-                .bind(Utc::now().to_rfc3339())
-                .execute(&mut *tx)
-                .await?;
+            let voice = voices.get(label).and_then(|v| v.as_ref());
+            sqlx::query(
+                "INSERT INTO meeting_speakers (id, meeting_id, speaker_key, person_id, created_at, voiceprint, voiceprint_lines)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)",
+            )
+            .bind(format!("speaker-{}", Uuid::new_v4()))
+            .bind(meeting_id)
+            .bind(format!("S{}", label + 1))
+            .bind(carried.get(&label))
+            .bind(Utc::now().to_rfc3339())
+            .bind(voice.map(|(embedding, _)| encode_voice(embedding)))
+            .bind(voice.map(|(_, lines)| *lines as i64))
+            .execute(&mut *tx)
+            .await?;
         }
         for (line_id, label) in assignments {
             if let Some(label) = label {
@@ -668,6 +751,107 @@ impl PeopleRepository {
         let speakers = Self::fetch_speakers(&mut tx, meeting_id).await?;
         tx.commit().await?;
         Ok(speakers)
+    }
+
+    /// Guess who the unnamed speakers of a meeting are by comparing their voices with the voices
+    /// remembered for people in other meetings. Suggestions only: nothing is assigned.
+    ///
+    /// For each speaker up to three people at or above `MIN_SUGGESTION_SIMILARITY` are returned,
+    /// best first. A person's score is their closest remembered voice (it varies with the room and
+    /// microphone, so the nearest sample beats an average). Each person is the first suggestion
+    /// (`is_best`) for at most one speaker: the one they match most closely.
+    pub async fn suggest_people_for_meeting(
+        pool: &SqlitePool,
+        meeting_id: &str,
+    ) -> Result<Vec<SpeakerSuggestion>, PeopleError> {
+        use std::collections::{BTreeMap, HashSet};
+
+        let slots: Vec<(String, Vec<u8>)> = sqlx::query_as(
+            "SELECT speaker_key, voiceprint FROM meeting_speakers
+             WHERE meeting_id = ? AND person_id IS NULL AND voiceprint IS NOT NULL",
+        )
+        .bind(meeting_id)
+        .fetch_all(pool)
+        .await?;
+        if slots.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // person -> (name, remembered voices, meetings they come from)
+        let rows: Vec<(String, String, Vec<u8>, String)> = sqlx::query_as(
+            "SELECT ms.person_id, p.name, ms.voiceprint, ms.meeting_id
+             FROM meeting_speakers ms JOIN people p ON p.id = ms.person_id
+             WHERE ms.voiceprint IS NOT NULL AND ms.meeting_id != ?",
+        )
+        .bind(meeting_id)
+        .fetch_all(pool)
+        .await?;
+        let mut known: BTreeMap<String, (String, Vec<Vec<f32>>, HashSet<String>)> = BTreeMap::new();
+        for (person_id, name, bytes, from_meeting) in rows {
+            let entry = known.entry(person_id).or_insert_with(|| (name, Vec::new(), HashSet::new()));
+            entry.1.push(decode_voice(&bytes));
+            entry.2.insert(from_meeting);
+        }
+
+        // Every (speaker, person) pair that is alike enough
+        let mut pairs: Vec<(String, String, f32)> = Vec::new();
+        for (slot_key, bytes) in &slots {
+            let voice = decode_voice(bytes);
+            for (person_id, (_, voices, _)) in &known {
+                let best = voices.iter().filter_map(|v| voice_similarity(&voice, v)).fold(f32::MIN, f32::max);
+                if best >= MIN_SUGGESTION_SIMILARITY {
+                    pairs.push((slot_key.clone(), person_id.clone(), best));
+                }
+            }
+        }
+        pairs.sort_by(|a, b| b.2.total_cmp(&a.2).then(a.0.cmp(&b.0)).then(a.1.cmp(&b.1)));
+
+        // Strongest matches first: each speaker and each person is "best" at most once
+        let (mut best_taken, mut people_taken): (HashSet<String>, HashSet<String>) = (HashSet::new(), HashSet::new());
+        let mut suggestions: Vec<SpeakerSuggestion> = Vec::new();
+        let mut per_speaker: BTreeMap<String, usize> = BTreeMap::new();
+        for (slot_key, person_id, similarity) in pairs {
+            let count = per_speaker.entry(slot_key.clone()).or_default();
+            if *count >= MAX_SUGGESTIONS_PER_SPEAKER {
+                continue;
+            }
+            *count += 1;
+            let is_best = !best_taken.contains(&slot_key) && !people_taken.contains(&person_id);
+            if is_best {
+                best_taken.insert(slot_key.clone());
+                people_taken.insert(person_id.clone());
+            }
+            let (name, _, meetings) = &known[&person_id];
+            suggestions.push(SpeakerSuggestion {
+                speaker_key: slot_key,
+                person_id,
+                person_name: name.clone(),
+                similarity,
+                strength: if similarity >= STRONG_SUGGESTION_SIMILARITY { "likely" } else { "possible" }.to_string(),
+                meetings: meetings.len() as i64,
+                is_best,
+            });
+        }
+        // Stable order for the UI: by speaker number, best match first
+        suggestions.sort_by(|a, b| {
+            speaker_number(&a.speaker_key).cmp(&speaker_number(&b.speaker_key))
+                .then(b.is_best.cmp(&a.is_best))
+                .then(b.similarity.total_cmp(&a.similarity))
+        });
+        Ok(suggestions)
+    }
+
+    /// Erase the remembered voice of a person (their name and meetings stay). Returns how many
+    /// stored voices were cleared.
+    pub async fn forget_person_voice(pool: &SqlitePool, person_id: &str) -> Result<u64, PeopleError> {
+        let cleared = sqlx::query(
+            "UPDATE meeting_speakers SET voiceprint = NULL, voiceprint_lines = NULL
+             WHERE person_id = ? AND voiceprint IS NOT NULL",
+        )
+        .bind(person_id)
+        .execute(pool)
+        .await?;
+        Ok(cleared.rows_affected())
     }
 
     /// Remove a speaker slot; its lines become unlabeled.
@@ -998,13 +1182,13 @@ mod tests {
                 .bind(id).bind(i as f64).execute(&pool).await.unwrap();
         }
         let speakers = PeopleRepository::apply_detected_speakers(
-            &pool, "m1", &assign(&[("l1", Some(0)), ("l2", Some(1)), ("l3", Some(0)), ("l4", None)]),
+            &pool, "m1", &assign(&[("l1", Some(0)), ("l2", Some(1)), ("l3", Some(0)), ("l4", None)]), &[],
         ).await.unwrap();
         let summary: Vec<_> = speakers.iter().map(|s| (s.speaker_key.as_str(), s.segment_count)).collect();
         assert_eq!(summary, [("S1", 2), ("S2", 1)]);
         let labels: Vec<(String, Option<String>)> = sqlx::query_as("SELECT id, speaker FROM transcripts ORDER BY id").fetch_all(&pool).await.unwrap();
         assert_eq!(labels[3], ("l4".to_string(), None), "an unlabelled line stays unlabelled");
-        assert!(PeopleRepository::apply_detected_speakers(&pool, "nope", &[]).await.is_err());
+        assert!(PeopleRepository::apply_detected_speakers(&pool, "nope", &[], &[]).await.is_err());
     }
 
     #[tokio::test]
@@ -1024,7 +1208,7 @@ mod tests {
         let speakers = PeopleRepository::apply_detected_speakers(&pool, "m1", &assign(&[
             ("b1", Some(0)), ("b2", Some(0)),                                   // new S1 = old Ben's voice
             ("a1", Some(1)), ("a2", Some(1)), ("a3", Some(1)), ("c1", Some(1)), // new S2: 3 of 4 lines were Ana's
-        ])).await.unwrap();
+        ]), &[]).await.unwrap();
         let by_key: std::collections::HashMap<_, _> = speakers.iter().map(|s| (s.speaker_key.as_str(), s.person_name.as_deref())).collect();
         assert_eq!(by_key["S1"], Some("Ben"));
         assert_eq!(by_key["S2"], Some("Ana"));
@@ -1045,8 +1229,161 @@ mod tests {
             ("a1", Some(0)), ("x1", Some(0)), ("x2", Some(0)),   // 1 of 3 lines: too weak
             ("a2", Some(1)), ("x3", Some(1)),                    // 1 of 2 lines: half, enough
             ("x4", Some(2)),
-        ])).await.unwrap();
+        ]), &[]).await.unwrap();
         let named: Vec<_> = speakers.iter().filter_map(|s| s.person_name.as_deref().map(|n| (s.speaker_key.as_str(), n))).collect();
         assert_eq!(named, [("S2", "Ana")], "Ana goes to exactly one speaker");
+    }
+
+    // ---- voice memory
+
+    /// A unit vector along `axis` with a little of `other` mixed in: cosine to `axis` is about `closeness`.
+    fn voice(dim: usize, axis: usize, other: usize, closeness: f32) -> Vec<f32> {
+        let off = (1.0 - closeness * closeness).sqrt();
+        (0..dim).map(|d| if d == axis { closeness } else if d == other { off } else { 0.0 }).collect()
+    }
+
+    /// Detect a meeting with the given (line id -> speaker) layout and one voice per speaker.
+    async fn detect(pool: &SqlitePool, meeting: &str, lines: &[(&str, usize)], voices: Vec<Option<Vec<f32>>>) {
+        for (i, (id, _)) in lines.iter().enumerate() {
+            add_line_text(pool, id, meeting, i as f64, "", "x").await;
+        }
+        let assignments: Vec<(String, Option<usize>)> = lines.iter().map(|(id, l)| (id.to_string(), Some(*l))).collect();
+        let voices: Vec<Option<(Vec<f32>, usize)>> = voices.into_iter().map(|v| v.map(|e| (e, 5))).collect();
+        PeopleRepository::apply_detected_speakers(pool, meeting, &assignments, &voices).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn an_unnamed_speaker_is_matched_to_a_remembered_voice() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        add_meeting_on(&pool, "m2", "2026-10-02T10:00:00Z").await;
+        // Meeting 1: Ana (axis 0) and Ben (axis 1) are named
+        detect(&pool, "m1", &[("a1", 0), ("b1", 1)], vec![Some(voice(8, 0, 7, 1.0)), Some(voice(8, 1, 7, 1.0))]).await;
+        let ana = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        let ben = PeopleRepository::get_or_create_person(&pool, "Ben").await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", "S1", Some(&ana.id)).await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", "S2", Some(&ben.id)).await.unwrap();
+
+        // Meeting 2: S1 sounds like Ben (0.9), S2 like Ana (0.75), S3 like nobody
+        detect(&pool, "m2", &[("x1", 0), ("x2", 1), ("x3", 2)], vec![
+            Some(voice(8, 1, 6, 0.9)), Some(voice(8, 0, 6, 0.75)), Some(voice(8, 5, 6, 1.0)),
+        ]).await;
+        let suggestions = PeopleRepository::suggest_people_for_meeting(&pool, "m2").await.unwrap();
+        let summary: Vec<_> = suggestions.iter().map(|s| (s.speaker_key.as_str(), s.person_name.as_str(), s.strength.as_str(), s.is_best)).collect();
+        assert_eq!(summary, [("S1", "Ben", "likely", true), ("S2", "Ana", "likely", true)]);
+        assert!(suggestions.iter().all(|s| s.meetings == 1));
+        assert!((suggestions[0].similarity - 0.9).abs() < 1e-4);
+    }
+
+    #[tokio::test]
+    async fn weak_matches_named_speakers_and_the_meetings_own_voices_are_not_suggested() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        add_meeting_on(&pool, "m2", "2026-10-02T10:00:00Z").await;
+        detect(&pool, "m1", &[("a1", 0)], vec![Some(voice(8, 0, 7, 1.0))]).await;
+        let ana = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", "S1", Some(&ana.id)).await.unwrap();
+        // Ana's own meeting never suggests her to herself
+        assert!(PeopleRepository::suggest_people_for_meeting(&pool, "m1").await.unwrap().is_empty());
+
+        // 0.5 is below the threshold; 0.6 is a "possible" match
+        detect(&pool, "m2", &[("x1", 0), ("x2", 1)], vec![Some(voice(8, 0, 6, 0.5)), Some(voice(8, 0, 5, 0.6))]).await;
+        let suggestions = PeopleRepository::suggest_people_for_meeting(&pool, "m2").await.unwrap();
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!((suggestions[0].speaker_key.as_str(), suggestions[0].strength.as_str()), ("S2", "possible"));
+
+        // Once the speaker is named there is nothing left to suggest for it
+        PeopleRepository::set_speaker_person(&pool, "m2", "S2", Some(&ana.id)).await.unwrap();
+        assert!(PeopleRepository::suggest_people_for_meeting(&pool, "m2").await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_person_is_the_first_suggestion_for_only_one_speaker() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        add_meeting_on(&pool, "m2", "2026-10-02T10:00:00Z").await;
+        detect(&pool, "m1", &[("a1", 0)], vec![Some(voice(8, 0, 7, 1.0))]).await;
+        let ana = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", "S1", Some(&ana.id)).await.unwrap();
+
+        // Detection split one voice in two: S1 is closer to Ana than S2 is
+        detect(&pool, "m2", &[("x1", 0), ("x2", 1)], vec![Some(voice(8, 0, 6, 0.95)), Some(voice(8, 0, 5, 0.8))]).await;
+        let suggestions = PeopleRepository::suggest_people_for_meeting(&pool, "m2").await.unwrap();
+        let best: Vec<_> = suggestions.iter().filter(|s| s.is_best).map(|s| s.speaker_key.as_str()).collect();
+        assert_eq!(best, ["S1"], "Ana is offered first only to the closer speaker");
+        assert!(suggestions.iter().any(|s| s.speaker_key == "S2" && !s.is_best), "still listed as an alternative for S2");
+    }
+
+    #[tokio::test]
+    async fn the_closest_remembered_voice_counts_and_meetings_are_tallied() {
+        let pool = test_pool().await;
+        for (id, day) in [("m1", "01"), ("m2", "02"), ("m3", "03")] {
+            add_meeting_on(&pool, id, &format!("2026-10-{day}T10:00:00Z")).await;
+        }
+        let ana = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        // Ana sounded different in two meetings (a studio vs a noisy room); the new one matches the second
+        detect(&pool, "m1", &[("a1", 0)], vec![Some(voice(8, 0, 7, 1.0))]).await;
+        detect(&pool, "m2", &[("b1", 0)], vec![Some(voice(8, 1, 7, 1.0))]).await;
+        PeopleRepository::set_speaker_person(&pool, "m1", "S1", Some(&ana.id)).await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m2", "S1", Some(&ana.id)).await.unwrap();
+        detect(&pool, "m3", &[("c1", 0)], vec![Some(voice(8, 1, 6, 0.85))]).await;
+        let s = PeopleRepository::suggest_people_for_meeting(&pool, "m3").await.unwrap();
+        assert_eq!(s.len(), 1);
+        assert!((s[0].similarity - 0.85).abs() < 1e-4, "nearest sample, not the average");
+        assert_eq!(s[0].meetings, 2);
+        assert_eq!(PeopleRepository::get_person_detail(&pool, &ana.id).await.unwrap().voice_meetings, 2);
+    }
+
+    #[tokio::test]
+    async fn forgetting_a_voice_keeps_the_person_and_stops_suggestions() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        add_meeting_on(&pool, "m2", "2026-10-02T10:00:00Z").await;
+        detect(&pool, "m1", &[("a1", 0)], vec![Some(voice(8, 0, 7, 1.0))]).await;
+        let ana = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", "S1", Some(&ana.id)).await.unwrap();
+        detect(&pool, "m2", &[("x1", 0)], vec![Some(voice(8, 0, 6, 0.9))]).await;
+        assert_eq!(PeopleRepository::suggest_people_for_meeting(&pool, "m2").await.unwrap().len(), 1);
+
+        assert_eq!(PeopleRepository::forget_person_voice(&pool, &ana.id).await.unwrap(), 1);
+        assert!(PeopleRepository::suggest_people_for_meeting(&pool, "m2").await.unwrap().is_empty());
+        let detail = PeopleRepository::get_person_detail(&pool, &ana.id).await.unwrap();
+        assert_eq!((detail.voice_meetings, detail.meetings.len()), (0, 1), "still in the meeting, just not recognisable");
+    }
+
+    #[tokio::test]
+    async fn remembering_can_be_switched_off_and_deleting_a_person_forgets_their_voice() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        add_line_text(&pool, "a1", "m1", 0.0, "", "x").await;
+        // No voices passed: nothing stored
+        PeopleRepository::apply_detected_speakers(&pool, "m1", &assign(&[("a1", Some(0))]), &[]).await.unwrap();
+        let (stored,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM meeting_speakers WHERE voiceprint IS NOT NULL").fetch_one(&pool).await.unwrap();
+        assert_eq!(stored, 0);
+
+        PeopleRepository::apply_detected_speakers(&pool, "m1", &assign(&[("a1", Some(0))]), &[Some((voice(8, 0, 7, 1.0), 3))]).await.unwrap();
+        let ana = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", "S1", Some(&ana.id)).await.unwrap();
+        PeopleRepository::delete_person(&pool, &ana.id).await.unwrap();
+        let (stored,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM meeting_speakers WHERE voiceprint IS NOT NULL").fetch_one(&pool).await.unwrap();
+        assert_eq!(stored, 0, "no voice is left behind");
+        assert_eq!(PeopleRepository::get_meeting_speakers(&pool, "m1").await.unwrap().len(), 1, "the speaker slot itself stays");
+    }
+
+    #[tokio::test]
+    async fn merging_two_speakers_blends_their_voices() {
+        let pool = test_pool().await;
+        add_meeting_on(&pool, "m1", "2026-10-01T10:00:00Z").await;
+        add_meeting_on(&pool, "m2", "2026-10-02T10:00:00Z").await;
+        // One person split in two by detection: halves along axes 0 and 1
+        detect(&pool, "m1", &[("a1", 0), ("a2", 1)], vec![Some(voice(8, 0, 7, 1.0)), Some(voice(8, 1, 7, 1.0))]).await;
+        PeopleRepository::merge_speakers(&pool, "m1", "S2", "S1").await.unwrap();
+        let ana = PeopleRepository::get_or_create_person(&pool, "Ana").await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", "S1", Some(&ana.id)).await.unwrap();
+        // The blend sits between both halves, so a voice near either half now matches (~0.71 each)
+        detect(&pool, "m2", &[("x1", 0)], vec![Some(voice(8, 1, 6, 1.0))]).await;
+        let s = PeopleRepository::suggest_people_for_meeting(&pool, "m2").await.unwrap();
+        assert_eq!(s.len(), 1);
+        assert!((s[0].similarity - std::f32::consts::FRAC_1_SQRT_2).abs() < 1e-3, "similarity {}", s[0].similarity);
     }
 }

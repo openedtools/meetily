@@ -1,4 +1,4 @@
-use super::models::{AssignSpeakerResult, MeetingSpeaker, Person, PersonDetail, PersonLine, PersonMeetingHit, PersonSummary};
+use super::models::{AssignSpeakerResult, MeetingSpeaker, Person, PersonDetail, PersonLine, PersonMeetingHit, PersonSummary, SpeakerSuggestion};
 use crate::database::repositories::people::{PeopleError, PeopleRepository};
 use crate::state::AppState;
 use log::{error as log_error, info as log_info};
@@ -89,6 +89,30 @@ pub async fn api_get_person_lines(
     PeopleRepository::list_person_lines(state.db_manager.pool(), &person_id, query.as_deref(), limit)
         .await
         .map_err(|e| ui_error("api_get_person_lines", e))
+}
+
+/// Who the unnamed speakers of a meeting might be, from voices remembered in other meetings.
+/// Suggestions only; nothing is assigned until the user accepts one.
+#[tauri::command]
+pub async fn api_get_speaker_suggestions(
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+) -> Result<Vec<SpeakerSuggestion>, String> {
+    PeopleRepository::suggest_people_for_meeting(state.db_manager.pool(), &meeting_id)
+        .await
+        .map_err(|e| ui_error("api_get_speaker_suggestions", e))
+}
+
+/// Erase the remembered voice of a person (their name and meetings stay).
+#[tauri::command]
+pub async fn api_forget_person_voice(
+    state: tauri::State<'_, AppState>,
+    person_id: String,
+) -> Result<u64, String> {
+    log_info!("api_forget_person_voice called for {}", person_id);
+    PeopleRepository::forget_person_voice(state.db_manager.pool(), &person_id)
+        .await
+        .map_err(|e| ui_error("api_forget_person_voice", e))
 }
 
 /// Fold a duplicate person into another; returns the person who remains.

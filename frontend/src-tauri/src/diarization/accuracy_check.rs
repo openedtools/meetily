@@ -114,3 +114,92 @@ fn speaker_accuracy_on_real_recordings() {
     println!("mean accuracy with the speaker count given: {mean:.3} over {} recordings", scored.len());
     assert!(mean >= min_accuracy, "mean accuracy {mean:.3} below {min_accuracy}");
 }
+
+/// The voice-memory path end to end: name the speakers of one recording, then check that the same
+/// people are suggested in a *different* recording (other room, other codec) of the same voices.
+///
+/// `SPEAKER_TEST_MEMORY_PAIR=first,second` names two recordings in `SPEAKER_TEST_DIR` that share
+/// speakers (default `en_flite4,en_flite4_room`).
+#[tokio::test]
+#[ignore = "needs SPEAKER_TEST_MODEL and SPEAKER_TEST_DIR (see module docs)"]
+async fn voice_memory_recognises_people_across_recordings() {
+    use crate::database::repositories::people::PeopleRepository;
+    use sqlx::sqlite::SqlitePoolOptions;
+
+    let model = std::env::var("SPEAKER_TEST_MODEL").expect("set SPEAKER_TEST_MODEL");
+    let dir = PathBuf::from(std::env::var("SPEAKER_TEST_DIR").expect("set SPEAKER_TEST_DIR"));
+    let pair = std::env::var("SPEAKER_TEST_MEMORY_PAIR").unwrap_or_else(|_| "en_flite4,en_flite4_room".to_string());
+    let names: Vec<&str> = pair.split(',').collect();
+    assert_eq!(names.len(), 2, "SPEAKER_TEST_MEMORY_PAIR must be two recording names");
+    let mut embedder = SpeakerEmbedder::load(Path::new(&model)).expect("load model");
+
+    let pool = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+
+    // For each recording: detect speakers (count known), store them with their voices, and note
+    // which true speaker each detected speaker really is.
+    let mut truth_of_slot: Vec<Vec<(String, String)>> = Vec::new();
+    for (index, name) in names.iter().enumerate() {
+        let meeting_id = format!("m{}", index + 1);
+        let audio = audio_for(&dir, name).unwrap_or_else(|| panic!("no audio for {name}"));
+        let turns: Vec<Turn> = serde_json::from_str(&std::fs::read_to_string(dir.join(format!("{name}.json"))).unwrap()).unwrap();
+        let samples = decode_audio_file(&audio).expect("decode").to_whisper_format();
+        let lines: Vec<LineInput> = turns
+            .iter()
+            .map(|t| {
+                let from = ((t.start * SAMPLE_RATE as f64) as usize).min(samples.len());
+                let to = ((t.end * SAMPLE_RATE as f64) as usize).min(samples.len());
+                LineInput { duration: t.end - t.start, embedding: embedder.embed(&samples[from..to]).unwrap() }
+            })
+            .collect();
+        let true_speakers: std::collections::BTreeSet<&str> = turns.iter().map(|t| t.speaker.as_str()).collect();
+        let labeling = assign_speakers(&lines, &Options { num_speakers: Some(true_speakers.len()), ..Options::default() });
+
+        sqlx::query("INSERT INTO meetings (id, title, created_at, updated_at) VALUES (?, ?, 'x', 'x')")
+            .bind(&meeting_id).bind(*name).execute(&pool).await.unwrap();
+        let mut assignments = Vec::new();
+        for (i, (turn, label)) in turns.iter().zip(&labeling.labels).enumerate() {
+            let id = format!("{meeting_id}-{i}");
+            sqlx::query("INSERT INTO transcripts (id, meeting_id, transcript, timestamp, audio_start_time, audio_end_time) VALUES (?, ?, 'x', '10:00', ?, ?)")
+                .bind(&id).bind(&meeting_id).bind(turn.start).bind(turn.end).execute(&pool).await.unwrap();
+            assignments.push((id, Some(*label)));
+        }
+        PeopleRepository::apply_detected_speakers(&pool, &meeting_id, &assignments, &labeling.voices).await.unwrap();
+
+        // Which true speaker does each detected speaker mostly correspond to?
+        let mut slots = Vec::new();
+        for speaker in 0..labeling.num_speakers {
+            let mut tally: BTreeMap<&str, usize> = BTreeMap::new();
+            for (turn, label) in turns.iter().zip(&labeling.labels) {
+                if *label == speaker {
+                    *tally.entry(turn.speaker.as_str()).or_default() += 1;
+                }
+            }
+            let truth = tally.into_iter().max_by_key(|(_, n)| *n).map(|(t, _)| t.to_string()).unwrap();
+            slots.push((format!("S{}", speaker + 1), truth));
+        }
+        truth_of_slot.push(slots);
+    }
+
+    // The first recording's speakers are named by the user...
+    for (key, truth) in &truth_of_slot[0] {
+        let person = PeopleRepository::get_or_create_person(&pool, truth).await.unwrap();
+        PeopleRepository::set_speaker_person(&pool, "m1", key, Some(&person.id)).await.unwrap();
+    }
+    // ...and the second one should now be recognised
+    let suggestions = PeopleRepository::suggest_people_for_meeting(&pool, "m2").await.unwrap();
+    let mut correct = 0;
+    for (key, truth) in &truth_of_slot[1] {
+        let best = suggestions.iter().find(|s| &s.speaker_key == key && s.is_best);
+        println!(
+            "{key}: really {truth:<6} suggested {:<8} similarity {}",
+            best.map_or("(nothing)", |s| s.person_name.as_str()),
+            best.map_or("-".to_string(), |s| format!("{:.2} ({})", s.similarity, s.strength)),
+        );
+        if best.map_or(false, |s| &s.person_name == truth) {
+            correct += 1;
+        }
+    }
+    println!("recognised {correct} of {} speakers across recordings", truth_of_slot[1].len());
+    assert_eq!(correct, truth_of_slot[1].len(), "every speaker should be recognised");
+}

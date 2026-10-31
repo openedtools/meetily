@@ -68,6 +68,8 @@ pub struct PersonLine {
 pub struct PersonDetail {
     pub person: Person,
     pub meetings: Vec<PersonMeeting>,
+    /// In how many meetings their voice has been remembered (used to suggest names)
+    pub voice_meetings: i64,
 }
 
 /// A meeting found because a speaker's name matched a search.
@@ -76,4 +78,20 @@ pub struct PersonMeetingHit {
     pub meeting_id: String,
     pub title: String,
     pub person_name: String,
+}
+
+/// A guess at who an unnamed speaker is, from voices remembered in other meetings.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SpeakerSuggestion {
+    pub speaker_key: String,
+    pub person_id: String,
+    pub person_name: String,
+    /// Cosine similarity of the voices (1.0 identical)
+    pub similarity: f32,
+    /// "likely" or "possible"
+    pub strength: String,
+    /// How many meetings the remembered voice comes from
+    pub meetings: i64,
+    /// The one suggestion to offer first for this speaker (a person is never best for two speakers)
+    pub is_best: bool,
 }

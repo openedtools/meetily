@@ -31,16 +31,22 @@ pub struct LineInput {
     pub embedding: Option<Vec<f32>>,
 }
 
+/// A speaker's average voice: a unit-length embedding and how many lines it was averaged from.
+pub type Voice = (Vec<f32>, usize);
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Labeling {
     /// Speaker index for each line (0-based, numbered by first appearance in the meeting).
     pub labels: Vec<usize>,
     pub num_speakers: usize,
+    /// Average voice of each speaker (index = speaker), or `None` if none of their lines could be
+    /// measured. Used to recognise the same person in later meetings.
+    pub voices: Vec<Option<Voice>>,
 }
 
 pub fn assign_speakers(lines: &[LineInput], opts: &Options) -> Labeling {
     if lines.is_empty() {
-        return Labeling { labels: Vec::new(), num_speakers: 0 };
+        return Labeling { labels: Vec::new(), num_speakers: 0, voices: Vec::new() };
     }
 
     // Lines that can anchor a voice. If none are long enough, use whatever we could measure.
@@ -52,7 +58,7 @@ pub fn assign_speakers(lines: &[LineInput], opts: &Options) -> Labeling {
     }
     if anchors.is_empty() {
         // Nothing measurable: one speaker.
-        return Labeling { labels: vec![0; lines.len()], num_speakers: 1 };
+        return Labeling { labels: vec![0; lines.len()], num_speakers: 1, voices: vec![None] };
     }
     if anchors.len() > opts.max_cluster_items.max(2) {
         let step = anchors.len().div_ceil(opts.max_cluster_items.max(2));
@@ -109,7 +115,31 @@ pub fn assign_speakers(lines: &[LineInput], opts: &Options) -> Labeling {
             })
         })
         .collect();
-    Labeling { num_speakers: order.len().max(1), labels }
+    let num_speakers = order.len().max(1);
+    let voices = speaker_voices(lines, &labels, num_speakers, opts.min_cluster_secs);
+    Labeling { num_speakers, labels, voices }
+}
+
+/// Average the measured lines of each speaker, preferring lines long enough to be reliable.
+fn speaker_voices(lines: &[LineInput], labels: &[usize], num_speakers: usize, min_secs: f64) -> Vec<Option<Voice>> {
+    (0..num_speakers)
+        .map(|speaker| {
+            let measured: Vec<(&Vec<f32>, f64)> = lines
+                .iter()
+                .zip(labels)
+                .filter(|(_, &label)| label == speaker)
+                .filter_map(|(line, _)| line.embedding.as_ref().map(|e| (e, line.duration)))
+                .collect();
+            let solid: Vec<&Vec<f32>> = measured.iter().filter(|(_, d)| *d >= min_secs).map(|(e, _)| *e).collect();
+            let chosen = if solid.is_empty() { measured.iter().map(|(e, _)| *e).collect() } else { solid };
+            let first = chosen.first()?;
+            let mut sum = vec![0.0f32; first.len()];
+            for embedding in &chosen {
+                sum.iter_mut().zip(embedding.iter()).for_each(|(acc, v)| *acc += v);
+            }
+            Some((normalized(sum), chosen.len()))
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -209,7 +239,10 @@ mod tests {
     #[test]
     fn nothing_measurable_means_one_speaker_and_empty_input_is_empty() {
         let lines = vec![LineInput { duration: 0.2, embedding: None }; 4];
-        assert_eq!(assign_speakers(&lines, &Options::default()), Labeling { labels: vec![0; 4], num_speakers: 1 });
+        assert_eq!(
+            assign_speakers(&lines, &Options::default()),
+            Labeling { labels: vec![0; 4], num_speakers: 1, voices: vec![None] }
+        );
         assert_eq!(assign_speakers(&[], &Options::default()).labels.len(), 0);
     }
 
@@ -227,5 +260,29 @@ mod tests {
         let result = assign_speakers(&lines, &Options { max_cluster_items: 40, ..Options::default() });
         assert_eq!(result.labels.len(), 300);
         assert!(same_partition(&result.labels, &truth));
+    }
+
+    #[test]
+    fn each_speaker_gets_an_average_voice_from_their_reliable_lines() {
+        // Three voices along separate axes; short lines (0.6 s) must not count towards the voice
+        let (lines, _) = conversation(&TURNS, 0.1, 9, |i| if i % 4 == 3 { 0.6 } else { 3.0 });
+        let result = assign_speakers(&lines, &Options::default());
+        assert_eq!(result.voices.len(), result.num_speakers);
+        for (speaker, voice) in result.voices.iter().enumerate() {
+            let (embedding, count) = voice.as_ref().expect("every speaker has a voice");
+            let reliable = lines.iter().zip(&result.labels).filter(|(l, &lab)| lab == speaker && l.duration >= 1.0).count();
+            assert_eq!(*count, reliable, "only reliable lines are averaged");
+            assert!((embedding.iter().map(|x| x * x).sum::<f32>() - 1.0).abs() < 1e-4, "unit length");
+        }
+        // Distinct speakers have distinct voices
+        let (a, b) = (result.voices[0].as_ref().unwrap(), result.voices[1].as_ref().unwrap());
+        assert!(cosine_similarity(&a.0, &b.0) < 0.5);
+    }
+
+    #[test]
+    fn a_speaker_with_only_short_lines_still_gets_a_voice() {
+        let (lines, _) = conversation(&TURNS, 0.1, 10, |_| 0.5);
+        let result = assign_speakers(&lines, &Options::default());
+        assert!(result.voices.iter().all(|v| v.is_some()));
     }
 }

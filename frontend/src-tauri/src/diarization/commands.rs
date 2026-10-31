@@ -7,7 +7,7 @@ use super::model;
 use crate::audio::decoder::decode_audio_file;
 use crate::audio::retranscription::{find_audio_file, is_retranscription_in_progress};
 use crate::database::repositories::{meeting::MeetingsRepository, people::PeopleRepository};
-use crate::people::models::MeetingSpeaker;
+use crate::people::models::{MeetingSpeaker, SpeakerSuggestion};
 use crate::state::AppState;
 use log::{error as log_error, info as log_info};
 use serde::Serialize;
@@ -52,6 +52,8 @@ pub struct DetectSpeakersResult {
     pub speakers: Vec<MeetingSpeaker>,
     pub lines_labeled: usize,
     pub lines_total: usize,
+    /// Unnamed speakers whose voice matches someone named in an earlier meeting
+    pub suggestions: Vec<SpeakerSuggestion>,
 }
 
 #[derive(Clone, Serialize)]
@@ -111,12 +113,16 @@ pub async fn speaker_model_download<R: Runtime>(app: AppHandle<R>) -> Result<(),
 /// `num_speakers` is how many people spoke, if known (more reliable than guessing); `None`
 /// estimates it. Replaces the meeting's current speaker labels but keeps names the user gave
 /// wherever a voice still matches. Emits `speaker-detection-progress`.
+///
+/// Each speaker's average voice is kept on this computer so later meetings can suggest names;
+/// pass `remember_voices: false` to keep nothing.
 #[tauri::command]
 pub async fn api_detect_speakers<R: Runtime>(
     app: AppHandle<R>,
     state: tauri::State<'_, AppState>,
     meeting_id: String,
     num_speakers: Option<u32>,
+    remember_voices: Option<bool>,
 ) -> Result<DetectSpeakersResult, String> {
     let Some(_busy) = Busy::acquire(&DETECTING) else {
         return Err("Speaker detection is already running".to_string());
@@ -206,10 +212,16 @@ pub async fn api_detect_speakers<R: Runtime>(
         .zip(&labeling.labels)
         .map(|((id, _, _), label)| (id.clone(), Some(*label)))
         .collect();
-    let speakers = PeopleRepository::apply_detected_speakers(pool, &meeting_id, &assignments)
+    let voices = if remember_voices.unwrap_or(true) { labeling.voices.as_slice() } else { &[] };
+    let speakers = PeopleRepository::apply_detected_speakers(pool, &meeting_id, &assignments, voices)
         .await
         .map_err(|e| e.to_string())?;
+    // A failure to guess names must never undo a successful detection
+    let suggestions = PeopleRepository::suggest_people_for_meeting(pool, &meeting_id).await.unwrap_or_else(|e| {
+        log_error!("Could not suggest names for {}: {}", meeting_id, e);
+        Vec::new()
+    });
 
     log_info!("Detected {} speakers in {}", labeling.num_speakers, meeting_id);
-    Ok(DetectSpeakersResult { speakers, lines_labeled: timed.len(), lines_total })
+    Ok(DetectSpeakersResult { speakers, lines_labeled: timed.len(), lines_total, suggestions })
 }

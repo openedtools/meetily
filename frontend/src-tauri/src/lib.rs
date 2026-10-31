@@ -753,6 +753,8 @@ pub fn run() {
             people::commands::api_update_person_notes,
             people::commands::api_get_person_lines,
             people::commands::api_merge_people,
+            people::commands::api_get_speaker_suggestions,
+            people::commands::api_forget_person_voice,
             people::commands::api_search_meetings_by_person,
             people::commands::api_get_meeting_speakers,
             people::commands::api_add_meeting_speaker,
