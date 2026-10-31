@@ -9,7 +9,10 @@ static ANALYTICS_CLIENT: std::sync::Mutex<Option<Arc<AnalyticsClient>>> = std::s
 #[command]
 pub async fn init_analytics() -> Result<(), String> {
     let config = AnalyticsConfig {
-        api_key: "phc_ohznXPkRSJYWmrfez9mYxtXv5U5Nekq3iiUts87dJfcr".to_string(),
+        // Deliberately empty in this fork: with no key the analytics client never starts, so nothing is
+        // ever sent. (The upstream project's key used to be here, which sent opted-in usage events to
+        // the upstream project's PostHog account.)
+        api_key: String::new(),
         host: Some("https://us.i.posthog.com".to_string()),
         enabled: true,
     };

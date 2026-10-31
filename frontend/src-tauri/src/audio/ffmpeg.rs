@@ -161,10 +161,22 @@ fn find_ffmpeg_path_internal() -> Option<PathBuf> {
     None // Return None if ffmpeg is not found
 }
 
+/// Whether a missing FFmpeg may be downloaded at runtime. Off: that download has no integrity check.
+const ALLOW_UNVERIFIED_FFMPEG_DOWNLOAD: bool = false;
+
 fn handle_ffmpeg_installation() -> Result<(), anyhow::Error> {
     if ffmpeg_is_installed() {
         debug!("ffmpeg is already installed");
         return Ok(());
+    }
+
+    // This used to download an FFmpeg build from the internet with no integrity check and then run it.
+    // The installer bundles a checksum-pinned FFmpeg that is found first (see find_ffmpeg_path), so a
+    // missing one means a damaged install. Fail closed instead of running a binary nobody verified.
+    if !ALLOW_UNVERIFIED_FFMPEG_DOWNLOAD {
+        return Err(anyhow::anyhow!(
+            "FFmpeg was not found. It is bundled with the app; please reinstall the app."
+        ));
     }
 
     debug!("ffmpeg not found. installing...");

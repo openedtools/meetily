@@ -759,12 +759,36 @@ pub async fn api_delete_meeting<R: Runtime>(
 
     let pool = state.db_manager.pool();
 
+    // Remember where the recording lives before the database row disappears
+    let recording_folder = MeetingsRepository::get_meeting_metadata(pool, &meeting_id)
+        .await
+        .ok()
+        .flatten()
+        .and_then(|m| m.folder_path)
+        .filter(|p| !p.trim().is_empty());
+
     match MeetingsRepository::delete_meeting(pool, &meeting_id).await {
         Ok(true) => {
             log_info!("Successfully deleted meeting {}", meeting_id);
+            // The audio and full transcript are files on disk, not database rows: remove them too
+            let mut files_removed = 0;
+            let mut file_problem: Option<String> = None;
+            if let Some(folder) = recording_folder {
+                match tokio::task::spawn_blocking(move || super::recording_files::delete_recording_files(std::path::Path::new(&folder))).await {
+                    Ok(Ok(count)) => files_removed = count,
+                    Ok(Err(e)) => {
+                        // e.g. the recording is open in the audio player on Windows
+                        log_warn!("Could not remove recording files for {}: {}", meeting_id, e);
+                        file_problem = Some(e.to_string());
+                    }
+                    Err(e) => log_warn!("Recording cleanup stopped unexpectedly for {}: {}", meeting_id, e),
+                }
+            }
             Ok(serde_json::json!({
                 "status": "success",
-                "message": "Meeting deleted successfully"
+                "message": "Meeting deleted successfully",
+                "recording_files_removed": files_removed,
+                "recording_files_error": file_problem
             }))
         }
         Ok(false) => {
@@ -1035,8 +1059,9 @@ pub async fn open_meeting_folder<R: Runtime>(
 
                 // Verify folder exists
                 let path = std::path::Path::new(&folder_path);
-                if !path.exists() {
-                    log_warn!("Folder path does not exist: {}", folder_path);
+                // A directory only: handing a file path to the file manager would launch that file
+                if !path.is_dir() {
+                    log_warn!("Folder path does not exist or is not a folder: {}", folder_path);
                     return Err(format!("Recording folder not found: {}", folder_path));
                 }
 
@@ -1154,13 +1179,18 @@ pub async fn debug_backend_connection<R: Runtime>(app: AppHandle<R>) -> Result<S
 pub async fn open_external_url(url: String) -> Result<(), String> {
     use std::process::Command;
 
+    // Only web/mail links, and never via a shell: the old `cmd /C start <url>` let a link such as
+    // `https://x.com/&calc.exe` run a command. `explorer` opens a URL in the default browser without
+    // interpreting it.
+    let url = super::safe_open::validated_external_url(&url)?;
+
     let result = if cfg!(target_os = "windows") {
-        Command::new("cmd").args(&["/C", "start", &url]).output()
+        Command::new("explorer").arg(&url).spawn()
     } else if cfg!(target_os = "macos") {
-        Command::new("open").arg(&url).output()
+        Command::new("open").arg(&url).spawn()
     } else {
         // Linux and other Unix-like systems
-        Command::new("xdg-open").arg(&url).output()
+        Command::new("xdg-open").arg(&url).spawn()
     };
 
     match result {

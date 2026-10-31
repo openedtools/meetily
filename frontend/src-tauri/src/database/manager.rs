@@ -1,4 +1,6 @@
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{migrate::MigrateDatabase, Result, Sqlite, SqlitePool, Transaction};
+use std::str::FromStr;
 use std::fs;
 use std::path::Path;
 use tauri::Manager;
@@ -30,7 +32,10 @@ impl DatabaseManager {
             }
         }
 
-        let pool = SqlitePool::connect(tauri_db_path).await?;
+        // secure_delete makes SQLite overwrite deleted content instead of leaving the old text in
+        // unused pages of the file, so a deleted meeting's transcript is not recoverable from the database
+        let options = SqliteConnectOptions::from_str(tauri_db_path)?.pragma("secure_delete", "ON");
+        let pool = SqlitePoolOptions::new().connect_with(options).await?;
 
         sqlx::migrate!("./migrations").run(&pool).await?;
 
