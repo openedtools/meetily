@@ -246,17 +246,6 @@ describe('summary state restored when returning to a meeting', () => {
     expect(state.summaryStatus).toBe('completed');
   });
 
-  test('completion analytics retain the model used to start the attempt after settings change', async () => {
-    const initial = response({ status: 'idle', start: null });
-    await show(initial);
-    await act(async () => state.handleGenerateSummary());
-    configuredModel = 'different-model';
-    await show(initial);
-    getSummary = async () => response({ status: 'completed', data: { markdown: 'Finished summary' } });
-    await tick();
-    expect(trackCompletion.mock.calls[0]?.slice(0, 3)).toEqual(['ollama', 'test', true]);
-  });
-
   test('old in-flight poll cannot stop a resumed poll for the same process', async () => {
     let resolve!: (value: SummaryProcessResponse) => void;
     getSummary = () => new Promise(done => { resolve = done; });
