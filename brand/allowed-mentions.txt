@@ -18,8 +18,6 @@ frontend/src-tauri/src/parakeet_engine/parakeet_engine.rs | model download addre
 
 # Temporary: removed by a later work package in the Phase A plan
 frontend/src/components/About.tsx | About screen is rewritten in WP7 (upstream contact link)
-frontend/src/app/metadata.ts | dead file, deleted in WP4
-frontend/src/app/metadata.tsx | dead file, deleted in WP4
 frontend/src/lib/analytics.ts | telemetry client, removed in WP4
 frontend/src-tauri/src/lib_old_complex.rs | dead file, deleted in WP4
 frontend/src-tauri/tauri.conf.json | updater endpoint, removed in WP4
