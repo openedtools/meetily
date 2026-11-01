@@ -11,6 +11,7 @@ const CHECKS = [
   { name: 'dashes', script: 'dashes.mjs' },
   { name: 'brand drift', script: '../brand-apply.mjs', args: ['--check'] },
   { name: 'brand mentions', script: 'brand.mjs' },
+  { name: 'contrast', script: 'contrast.mjs' },
 ];
 
 let failed = 0;

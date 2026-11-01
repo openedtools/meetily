@@ -1,7 +1,9 @@
 'use client'
 
+import '@fontsource-variable/source-sans-3'
+import '@fontsource-variable/source-serif-4'
+import '@/styles/tokens.css'
 import './globals.css'
-import { Source_Sans_3 } from 'next/font/google'
 import Sidebar from '@/components/Sidebar'
 import { SidebarProvider } from '@/components/Sidebar/SidebarProvider'
 import MainContent from '@/components/MainContent'
@@ -22,18 +24,19 @@ import { DownloadProgressToastProvider } from '@/components/shared/DownloadProgr
 import { RecordingPostProcessingProvider } from '@/contexts/RecordingPostProcessingProvider'
 import { ImportAudioDialog, ImportDropOverlay } from '@/components/ImportAudio'
 import { ImportDialogProvider } from '@/contexts/ImportDialogContext'
+import { ThemeProvider, THEME_BOOT_SCRIPT, useTheme } from '@/contexts/ThemeContext'
 import { isAudioExtension, getAudioFormatsDisplayList } from '@/constants/audioFormats'
 
-
-const sourceSans3 = Source_Sans_3({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-source-sans-3',
-})
 
 // Module-level component - stable reference across RootLayout re-renders.
 // Defined here (not inside RootLayout) so React never sees a new function type
 // on re-render, which would cause unmount/remount and break initialization logic.
+/** Toasts follow the app theme. */
+function ThemedToaster() {
+  const { theme } = useTheme()
+  return <Toaster position="bottom-center" richColors closeButton theme={theme} />
+}
+
 function ConditionalImportDialog({
   showImportDialog,
   handleImportDialogClose,
@@ -227,48 +230,53 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en">
-      <body className={`${sourceSans3.variable} font-sans antialiased`}>
-        <RecordingStateProvider>
-          <TranscriptProvider>
-            <ConfigProvider>
-              <OllamaDownloadProvider>
-                <OnboardingProvider>
-                  <SidebarProvider>
-                    <TooltipProvider>
-                      <RecordingPostProcessingProvider>
-                        <ImportDialogProvider onOpen={handleOpenImportDialog}>
-                          {/* Download progress toast provider - listens for background downloads */}
-                          <DownloadProgressToastProvider />
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
+      <body className="font-sans antialiased">
+        <ThemeProvider>
+          <RecordingStateProvider>
+            <TranscriptProvider>
+              <ConfigProvider>
+                <OllamaDownloadProvider>
+                  <OnboardingProvider>
+                    <SidebarProvider>
+                      <TooltipProvider>
+                        <RecordingPostProcessingProvider>
+                          <ImportDialogProvider onOpen={handleOpenImportDialog}>
+                            {/* Download progress toast provider - listens for background downloads */}
+                            <DownloadProgressToastProvider />
 
-                          {/* Show onboarding or main app */}
-                          {showOnboarding ? (
-                            <OnboardingFlow onComplete={handleOnboardingComplete} />
-                          ) : (
-                            <div className="flex">
-                              <Sidebar />
-                              <MainContent>{children}</MainContent>
-                            </div>
-                          )}
-                          {/* Import audio overlay and dialog */}
-                          <ImportDropOverlay visible={showDropOverlay} />
-                          <ConditionalImportDialog
-                            showImportDialog={showImportDialog}
-                            handleImportDialogClose={handleImportDialogClose}
-                            importFilePath={importFilePath}
-                          />
-                        </ImportDialogProvider>
-                      </RecordingPostProcessingProvider>
-                    </TooltipProvider>
-                  </SidebarProvider>
-                </OnboardingProvider>
+                            {/* Show onboarding or main app */}
+                            {showOnboarding ? (
+                              <OnboardingFlow onComplete={handleOnboardingComplete} />
+                            ) : (
+                              <div className="flex">
+                                <Sidebar />
+                                <MainContent>{children}</MainContent>
+                              </div>
+                            )}
+                            {/* Import audio overlay and dialog */}
+                            <ImportDropOverlay visible={showDropOverlay} />
+                            <ConditionalImportDialog
+                              showImportDialog={showImportDialog}
+                              handleImportDialogClose={handleImportDialogClose}
+                              importFilePath={importFilePath}
+                            />
+                          </ImportDialogProvider>
+                        </RecordingPostProcessingProvider>
+                      </TooltipProvider>
+                    </SidebarProvider>
+                  </OnboardingProvider>
 
-              </OllamaDownloadProvider>
-            </ConfigProvider>
-          </TranscriptProvider>
-        </RecordingStateProvider>
+                </OllamaDownloadProvider>
+              </ConfigProvider>
+            </TranscriptProvider>
+          </RecordingStateProvider>
 
-        <Toaster position="bottom-center" richColors closeButton />
+          <ThemedToaster />
+        </ThemeProvider>
       </body>
     </html>
   )

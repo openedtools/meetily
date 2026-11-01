@@ -1,3 +1,6 @@
+/** A token is an "R G B" triplet, so opacity modifiers such as bg-paper/80 work. */
+const token = (name) => `rgb(var(--${name}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     darkMode: ['class'],
@@ -9,57 +12,56 @@ module.exports = {
   theme: {
   	extend: {
   		fontFamily: {
-  			sans: [
-  				'var(--font-source-sans-3)'
-  			]
+  			sans: ['var(--font-sans)'],
+  			serif: ['var(--font-serif)']
   		},
+  		// Semantic colours from src/styles/tokens.css. Components use only these (spec F-UI-1).
   		colors: {
-  			background: 'hsl(var(--background))',
-  			foreground: 'hsl(var(--foreground))',
-  			border: 'hsl(var(--border))',
-  			input: 'hsl(var(--input))',
-  			ring: 'hsl(var(--ring))',
-  			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
-  			},
-  			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
-  			},
-  			tertiary: '#64748b',
-  			card: {
-  				DEFAULT: 'hsl(var(--card))',
-  				foreground: 'hsl(var(--card-foreground))'
-  			},
-  			popover: {
-  				DEFAULT: 'hsl(var(--popover))',
-  				foreground: 'hsl(var(--popover-foreground))'
-  			},
-  			muted: {
-  				DEFAULT: 'hsl(var(--muted))',
-  				foreground: 'hsl(var(--muted-foreground))'
-  			},
+  			paper: token('paper'),
+  			surface: { DEFAULT: token('surface'), hover: token('surface-hover') },
+  			line: { DEFAULT: token('line'), strong: token('line-strong') },
+  			ink: { DEFAULT: token('ink'), muted: token('ink-muted') },
   			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
-  				foreground: 'hsl(var(--accent-foreground))'
+  				DEFAULT: token('accent'),
+  				strong: token('accent-strong'),
+  				'strong-hover': token('accent-strong-hover'),
+  				'strong-pressed': token('accent-strong-pressed'),
+  				tint: token('accent-tint')
   			},
-  			destructive: {
-  				DEFAULT: 'hsl(var(--destructive))',
-  				foreground: 'hsl(var(--destructive-foreground))'
-  			},
+  			'on-accent': token('on-accent'),
+  			danger: { DEFAULT: token('danger'), tint: token('danger-tint') },
+  			success: { DEFAULT: token('success'), tint: token('success-tint') },
+  			warning: { DEFAULT: token('warning'), tint: token('warning-tint') },
+  			sage: { DEFAULT: token('sage'), tint: token('sage-tint') },
+  			disabled: token('disabled'),
+  			scrim: 'rgb(var(--scrim) / var(--scrim-alpha))',
+
+  			// shadcn names, aliased to the tokens in globals.css
+  			background: token('background'),
+  			foreground: token('foreground'),
+  			border: token('border'),
+  			input: token('input'),
+  			ring: token('ring'),
+  			primary: { DEFAULT: token('primary'), foreground: token('primary-foreground') },
+  			secondary: { DEFAULT: token('secondary'), foreground: token('secondary-foreground') },
+  			card: { DEFAULT: token('card'), foreground: token('card-foreground') },
+  			popover: { DEFAULT: token('popover'), foreground: token('popover-foreground') },
+  			muted: { DEFAULT: token('muted'), foreground: token('muted-foreground') },
+  			destructive: { DEFAULT: token('destructive'), foreground: token('destructive-foreground') },
   			chart: {
-  				'1': 'hsl(var(--chart-1))',
-  				'2': 'hsl(var(--chart-2))',
-  				'3': 'hsl(var(--chart-3))',
-  				'4': 'hsl(var(--chart-4))',
-  				'5': 'hsl(var(--chart-5))'
+  				'1': token('chart-1'),
+  				'2': token('chart-2'),
+  				'3': token('chart-3'),
+  				'4': token('chart-4'),
+  				'5': token('chart-5')
   			}
   		},
   		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			card: 'var(--radius-card)',
+  			control: 'var(--radius-control)',
+  			lg: 'var(--radius-card)',
+  			md: 'var(--radius-control)',
+  			sm: 'calc(var(--radius-control) - 2px)'
   		},
   		keyframes: {
   			'accordion-down': {
