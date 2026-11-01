@@ -61,6 +61,17 @@ describe('applyToTauriConf', () => {
     expect(applyToTauriConf(once, next)).toBe(once);
   });
 
+  test('a CRLF file (a Windows checkout) is edited correctly and stays CRLF', () => {
+    // Without a mainBinaryName line, so the insertion path is exercised on CRLF too
+    const withoutBinaryName = realConf.split('\n').filter((l: string) => !l.includes('mainBinaryName')).join('\n');
+    const crlf = withoutBinaryName.replace(/\n/g, '\r\n');
+    const out = applyToTauriConf(crlf, next);
+    expect(JSON.parse(out).mainBinaryName).toBe('marginalia');
+    expect(out.includes('\r\n')).toBe(true);
+    expect(out.replace(/\r\n/g, '').includes('\n')).toBe(false); // no bare LF left behind
+    expect(applyToTauriConf(out, next)).toBe(out);
+  });
+
   test('keeps the original formatting (a line-level diff of a few lines)', () => {
     const out = applyToTauriConf(realConf, next).split('\n');
     const orig = realConf.split('\n');
@@ -114,6 +125,13 @@ describe('apply and check against a repository tree', () => {
     applyAll(root);
     expect(existsSync(path.join(root, 'frontend/src/lib/brand.generated.ts'))).toBe(true);
     expect(existsSync(path.join(root, 'frontend/src-tauri/src/brand_generated.rs'))).toBe(true);
+    expect(checkAll(root)).toEqual([]);
+
+    // A Windows checkout may turn every line ending into CRLF: that is not drift
+    for (const f of ['frontend/src/lib/brand.generated.ts', 'frontend/src-tauri/src/brand_generated.rs', 'frontend/src-tauri/tauri.conf.json']) {
+      const full = path.join(root, f);
+      writeFileSync(full, readFileSync(full, 'utf8').replace(/\r?\n/g, '\r\n'));
+    }
     expect(checkAll(root)).toEqual([]);
 
     const file = path.join(root, 'brand/brand.json');

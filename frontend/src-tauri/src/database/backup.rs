@@ -37,7 +37,7 @@ fn backup_error(what: impl std::fmt::Display) -> sqlx::Error {
 }
 
 /// Highest migration version recorded as applied, or `None` when there is no record yet.
-async fn applied_version(pool: &SqlitePool) -> sqlx::Result<Option<i64>> {
+pub(crate) async fn applied_version(pool: &SqlitePool) -> sqlx::Result<Option<i64>> {
     let has_table: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '_sqlx_migrations'",
     )
@@ -116,7 +116,7 @@ pub async fn backup_before_migration(
         let _ = fs::remove_file(&part_path);
         return Err(backup_error(e));
     }
-    if let Err(e) = fs::rename(&part_path, &final_path) {
+    if let Err(e) = crate::fs_retry::rename(&part_path, &final_path) {
         let _ = fs::remove_file(&part_path);
         return Err(backup_error(e));
     }

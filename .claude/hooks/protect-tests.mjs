@@ -31,20 +31,23 @@ const ti = input.tool_input ?? {};
 const file = ti.file_path;
 if (!file || !existsSync(file)) process.exit(0); // nothing to protect, or a new file
 
-const norm = String(file).replace(/\\/g, '/');
+// Lower case so that Windows folder names such as Tests or SRC match too
+const norm = String(file).replace(/\\/g, '/').toLowerCase();
 const TEST_DIR = /(^|\/)(tests?|__tests__)\//;
 const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$|_test\.rs$/;
 if (TEST_DIR.test(norm) || TEST_FILE.test(norm)) block(`${file} is an existing test file.`);
 
 if (!norm.endsWith('.rs')) process.exit(0);
 
-const content = readFileSync(file, 'utf8');
+// Compare with line endings normalised: files on Windows are often CRLF, tool input is LF
+const lf = (s) => String(s ?? '').replace(/\r\n/g, '\n');
+const content = lf(readFileSync(file, 'utf8'));
 const m = /#\[cfg\(test\)\]\s*(?:pub\s+)?mod\s+\w+/.exec(content);
 if (!m) process.exit(0);
 const start = m.index;
 
 if (tool === 'Write') {
-  if (!String(ti.content ?? '').includes(content.slice(start))) {
+  if (!lf(ti.content).includes(content.slice(start))) {
     block(`${file} has an inline test module and this rewrite changes it.`);
   }
   process.exit(0);
@@ -52,7 +55,7 @@ if (tool === 'Write') {
 
 const edits = tool === 'MultiEdit' ? (ti.edits ?? []) : [ti];
 for (const e of edits) {
-  const old = e.old_string;
+  const old = lf(e.old_string);
   if (!old) continue;
   let i = content.indexOf(old);
   while (i !== -1) {

@@ -45,7 +45,7 @@ P3 therefore needed no test deletions. The two tests in `tests/lib/analytics.tes
 2. **AC-HK-6 hook:** the hook locks existing tests when `LOCK_TESTS=1` is set (for bug-fix tasks), not when `ALLOW_TEST_EDITS` is unset. The spec's wording would block writing new tests during feature work.
 3. **F-UI-4 fonts:** bundled through pinned `@fontsource-variable/source-serif-4` and `@fontsource-variable/source-sans-3` packages (both OFL). The files ship in the build and no network is needed at build or run time after install. BlockNote's own Inter font import is overridden.
 4. **Token name:** the spec token `muted` is `ink-muted` in CSS and Tailwind, because shadcn already uses `muted` for a background.
-5. **F-ID-4 adoption** is more than a data-folder copy. A new identifier looks like a first launch, so onboarding would run and the models (several GB) would be re-downloaded. Adoption therefore also copies the stores (`onboarding-status.json`, `recording_preferences.json`), uses hard links for model files, reads the old database through `VACUUM INTO` (consistent even if the old app is open), and runs **before** any app state exists. Three data locations are hard-coded and do not follow the identifier: `Meetily/templates`, `meetily/notifications.json`, and `meetily-recordings`. All move into the app data folder (existing recordings keep their saved absolute path).
+5. **F-ID-4 adoption** is more than a data-folder copy. A new identifier looks like a first launch, so onboarding would run and the models (several GB) would be re-downloaded. Adoption therefore also copies the stores (`onboarding-status.json`, `recording_preferences.json`), copies model files (hard links would let one app truncate a file the other uses), reads the old database through `VACUUM INTO` (consistent even if the old app is open), and runs **before** any app state exists. Three data locations are hard-coded and do not follow the identifier: `Meetily/templates`, `meetily/notifications.json`, and `meetily-recordings`. All move into the app data folder (existing recordings keep their saved absolute path).
 6. **F-HK-1:** also remove `test_backend_connection`, `debug_backend_connection`, `get_server_address`, the `localhost:5167` CSP entry and the sidebar's `serverAddress`, which only served the archived backend.
 7. **F-HK-3:** the dead list is longer: `audio/stt.rs`, `audio/system_audio_stream.rs`, `audio/system_audio_types.ts`, `whisper_engine/_stderr_suppressor.rs`, `audio_v2/`, `CLEANUP_PLAN.md`, `build_backup.bat`, `app/metadata.ts` and `.tsx`, the empty `AudioPlayer.tsx`. Each is deleted only after `cargo check` and `tsc` confirm nothing references it. The new migration drops both `licensing` and `meeting_notes`. Old migrations are never edited (sqlx checks their checksums).
 8. **About screen:** the upstream marketing block ("Chat with the Zackriya team") and the analytics switch are removed, not restyled.
@@ -81,10 +81,10 @@ The order is chosen so that **no new build touches the data of the Meetily you u
 * **Adoption** (`src-tauri/src/adopt.rs`), called at the top of `run()` before the Tauri builder, using `rfd` (already a transitive dependency of the dialog plugin) for one Copy or Start fresh prompt:
   1. Conditions: the old folder has `meeting_minutes.sqlite`, the new folder has none, and no marker file exists.
   2. Copy into a temporary sibling folder, then rename into place, so an interrupted copy leaves nothing half-made.
-  3. Database through read-only `VACUUM INTO`. Model files by hard link, falling back to copy. Stores and legacy template and notification folders by copy.
+  3. Database through read-only `VACUUM INTO`, refused if it comes from a newer version than this build understands. Model files, stores and the legacy template and notification folders by copy (recordings are not copied; both apps keep using the same audio files, and the offer says so).
   4. Write an `.adopted` or `.declined` marker. The old folder is never modified or deleted.
 * Tests first, in a temporary tree: copy correctness, source byte-identical afterwards, interrupted copy leaves no partial target, second run is a no-op, declined is remembered, pure decision function covers each condition.
-* Not testable here (manual Windows checklist below): the real dialog, NTFS hard links, the old app running while adoption happens, and the WebView profile (not copied; the dialog says unsaved recovery data does not carry over).
+* Not testable here (manual Windows checklist below): the real dialog, the old app running while adoption happens, and the WebView profile (not copied; the dialog says unsaved recovery data does not carry over).
 * Files: `brand/*`, `frontend/scripts/brand-apply.mjs`, `tauri.conf.json`, `src-tauri/src/{adopt,legacy,brand_generated,lib,paths}.rs`, the string sites above.
 
 **Checkpoint A1.** Ryan builds and runs the Windows checklist. Success: the new app starts beside the old one, offers to bring the data over, shows the meetings, people and folders, skips onboarding, and the old app still works unchanged.
@@ -143,6 +143,7 @@ The order is chosen so that **no new build touches the data of the Meetily you u
 * `recording_saver.rs` (`initialize_meeting_folder`) and `audio/import.rs` load the saved preference instead of calling `get_default_recordings_folder()`.
 * Settings gets a folder picker (`select_recording_folder` is a stub today; use `tauri-plugin-dialog`). The picker warns when the path is inside OneDrive, iCloud Drive or Dropbox (detected from the known folder names under the user profile).
 * New installs default to `<app data>/recordings`. Adopted or older installs keep their saved absolute path, because adoption copies `recording_preferences.json`.
+* Deleting a meeting removes its audio. Recordings from an adopted install live in the earlier app's folder and are shared with it, so the new app must not delete files outside its own recordings folder without asking. Until then the adoption offer warns about it.
 * Add the folder to the asset and fs scopes only if a later phase needs the frontend to read it (none today).
 
 **WP9. Close-out**
@@ -168,7 +169,7 @@ The order is chosen so that **no new build touches the data of the Meetily you u
 4. **Migration ordering.** The backup precedes the drop migration. Older builds cannot open a database migrated by newer ones, which is why the identifier switch (separate data folder) comes first.
 5. **LLM prompt text.** Dash edits in `summary/processor.rs` change model input. Hand edited, with the 30 processor tests as a guard.
 6. **Dependencies.** Two fontsource packages and `rfd` as a direct dependency, all pinned. `posthog-rs`, the updater and process plugins, and two npm packages are removed. Lockfiles reviewed in the diff.
-7. **Not testable here:** Windows dialog and hard links, WebView profile behaviour, NSIS visuals, the installer. Covered by the checklist.
+7. **Not testable here:** Windows dialog, WebView profile behaviour, NSIS visuals, the installer. Covered by the checklist.
 8. **Existing red tests.** The 19 failures are unexplained. If the base commit is also red, they are fixed in WP1 or reported to you, never skipped silently.
 
 ## Options rejected
@@ -220,4 +221,9 @@ AC-ID-1 to AC-ID-6, AC-UI-1 to AC-UI-8 (AC-UI-9 only if the illustration is supp
 | WP3 | `.meetily_decode_` prefix kept as a legacy constant | New prefix `.quire_decode_` (derived from the slug), and the deletion allowlist matches both | Leftovers from the earlier build are still cleaned |
 | WP3 | Lint scope not stated | `lint:brand` scans product source, build scripts and configuration. README, docs, CI workflows and the archived backend are not scanned. `brand/allowed-mentions.txt` entries need a reason and a stale entry fails | Upstream documents legitimately describe the upstream product |
 | WP3 | n/a | Removed a broken placeholder link (`your-org/meetily`, to a notice file that does not exist) from the Bluetooth playback warning; the macOS aggregate device name is now the neutral `system-audio-tap` | No product name where it was only decoration |
+| WP3 | Models by hard link | Models are copied | Review finding: a hard link lets a failed re-download in one app truncate the file the other uses, which breaks "the old folder is never changed". Costs disk space and a minute of copying |
+| WP3 | A Yes or No offer, a dismissal counts as No | Three answers: Esc or the window button is not a decision and the person is asked again; only the No button is remembered | Review finding: rfd returns Cancel on dismissal, which would have stored a permanent No |
+| WP3 | Not in the plan | Adoption lock file (stale after one hour), refusal of a database from a newer version, retry of the final rename, a failure dialog that offers to open empty or close, folder size and a plain warning in the offer | Review findings on double launch, antivirus holding files on Windows, startup failing on every launch, and an offer that promised more than it did |
+| WP2, WP3 | Not in the plan | A database failure at startup shows a window with the reason instead of closing silently; the backup rename retries | Review finding: a release build has no console |
+| WP1 | Not in the plan | The test-lock hook normalises line endings and ignores case in paths; `brand:check` ignores line endings | Review findings for Windows checkouts |
 | WP3 | n/a | `rfd` added as a direct dependency for Windows and macOS only; Linux adopts without asking | Linux is not a user platform here, and the dialog toolkit is not linked there |

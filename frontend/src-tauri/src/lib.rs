@@ -44,6 +44,7 @@ pub mod config;
 pub mod console_utils;
 pub mod diarization;
 pub mod folders;
+pub mod fs_retry;
 pub mod database;
 pub mod notifications;
 pub mod ollama;
@@ -592,7 +593,15 @@ pub fn run() {
             tauri::async_runtime::block_on(async {
                 database::setup::initialize_database_on_startup(&_app.handle()).await
             })
-            .expect("Failed to initialize database");
+            .unwrap_or_else(|e| {
+                // A release build has no console, so say why before closing instead of vanishing
+                log::error!("Failed to initialize database: {e}");
+                adopt::show_error(
+                    &format!("{} could not open its data", brand_generated::NAME),
+                    &format!("Your data has not been changed.\n\nDetails: {e}"),
+                );
+                std::process::exit(1);
+            });
 
             // Initialize bundled templates directory for dynamic template discovery
             log::info!("Initializing bundled templates directory...");
