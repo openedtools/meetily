@@ -1,127 +1,37 @@
-# Meetily Privacy Policy
+# Quire Privacy Policy
 
-*Last updated: [Current Date]*
+Quire is a personal meeting recorder. It records, transcribes and summarises meetings on your own computer. This page says what it does with your data, based on the code in this repository.
 
-## Our Privacy-First Commitment
+## No usage statistics
 
-Meetily is built on the principle that your meeting data should remain private and under your control. This privacy policy explains how we handle data in our open-source meeting assistant.
+Quire collects no usage statistics, analytics or crash reports, and has no account or sign-in. There is no update check: the app never contacts a server to look for new versions.
 
-## Data Processing Philosophy
+## What stays on your computer
 
-### Local-First Processing
-- **Meeting transcription**: Processed entirely on your device using local Whisper models
-- **Audio recordings**: Never transmitted to external servers
-- **Meeting content**: Remains on your infrastructure
-- **AI summaries**: Generated locally or through your chosen LLM provider
+* **Recordings** are saved as audio files in the folder you choose in Settings.
+* **Transcripts, summaries, people, speakers and folders** are kept in a local database in the app's data folder (on Windows, `%APPDATA%\com.openedtools.notes`).
+* **Transcription** runs on your computer with a local speech model (Parakeet or Whisper). Audio is never sent anywhere for transcription.
+* **Settings** are stored in the same data folder.
 
-### Your Data Ownership
-- You own all meeting data, transcripts, and recordings
-- Data is stored locally on your device
-- No vendor lock-in - export your data anytime
-- Complete control over data retention and deletion
+Nothing is encrypted by the app itself. Your data is protected by your computer's account and disk protection, the same as your other files.
 
-## Usage Analytics
+## When Quire uses the network
 
-### What We Collect
-Usage analytics is optional and off by default. When you choose to enable it, Meetily collects minimal, anonymized usage data:
+Quire contacts another computer only in these cases:
 
-**Application Usage:**
-- Feature usage patterns (which tools you use most)
-- Session duration and frequency
-- Performance metrics (transcription success rates, error frequencies)
-- UI interaction patterns (button clicks, navigation flows)
+* **Downloading a model**, when you ask for one. Speech and summary models come from Hugging Face (`huggingface.co`). The Parakeet speech model comes from `meetily.towardsgeneralintelligence.com`, a host run by the original project. Only the file request is sent.
+* **Summaries with a cloud provider**, only if you choose one in Settings (OpenAI, Anthropic Claude, Groq, OpenRouter, or a custom address). The transcript of the meeting you summarise is sent to that provider and is then covered by their privacy policy. With the built-in model or a local Ollama, summaries are made on your computer.
+* **Local model servers** such as Ollama (`localhost:11434`) or LM Studio. These run on your own computer.
+* **Links you click**, which open in your web browser.
 
-**Technical Metrics:**
-- Application version and platform information
-- Error logs and crash reports (anonymized)
-- Performance benchmarks (processing times, resource usage)
+## Deleting your data
 
-### What We DON'T Collect
-We never collect:
-- ❌ Meeting content, transcripts, or recordings
-- ❌ Personal information or identifiable data
-- ❌ File names, meeting titles, or metadata
-- ❌ Audio data or voice patterns
-- ❌ Participant names or contact information
-- ❌ LLM conversations or AI-generated content
+Delete a meeting in the app to remove it and its audio. Uninstalling with "Delete app data" ticked removes the app's data folder. Recordings in a folder you chose are not removed automatically.
 
-### Why We Collect This Data
-When enabled, analytics helps us with:
-- **Product Quality**: Identifying and fixing bugs that impact user experience
-- **Performance Optimization**: Understanding resource usage and system bottlenecks
-- **Security**: Detecting potential security issues and vulnerabilities
-- **Feature Development**: Making data-driven decisions about new features
-- **Open Source Sustainability**: Ensuring the project meets user needs effectively
+## Data from the earlier app
 
-### Analytics Implementation
-- **Provider**: PostHog (privacy-focused analytics platform)
-- **Default**: Off by default; analytics starts only after you enable it in settings
-- **Anonymization**: All data linked to generated user IDs only - no personal identification
-- **Data retention**: 12 months maximum, then automatically deleted
-- **Encryption**: All data encrypted in transit using industry-standard protocols
-- **Location**: Data processed in accordance with PostHog's privacy policy
-- **Access Control**: Strictly limited to core development team members
+On first start Quire can copy data from Meetily, the app it was built from. The copy is made only if you say yes. Meetily's own data folder is never changed. Both apps keep pointing at the same recording files, so deleting a meeting in one app removes its audio for the other.
 
-## Third-Party Services
+## Credit
 
-### LLM Providers (Optional)
-If you choose to use external LLM providers:
-- **Anthropic Claude**: Subject to Anthropic's privacy policy
-- **Groq**: Subject to Groq's privacy policy
-- **Local Ollama**: Processed entirely on your device
-
-### Analytics Service (Optional)
-- **PostHog**: Used for usage analytics when enabled
-- **Data**: Only anonymized usage patterns, no meeting content
-- **Control**: Completely optional, off by default, and user-controlled
-
-## Your Privacy Rights
-
-### Data Control
-- **Access**: View all data stored locally on your device
-- **Export**: Export your data in standard formats
-- **Delete**: Remove all data from your device
-
-
-### Analytics Transparency
-- **Open source**: Full analytics implementation available for review in our source code
-- **Opt-in**: New and existing installs have analytics disabled until you turn it on
-- **Questions**: Contact us for any analytics-related concerns
-
-## Data Security
-
-### Local Security
-- Data encrypted at rest using your device's security features
-- No transmission of sensitive meeting data
-- Standard file system permissions protect your data
-
-### Open Source Transparency
-- Full source code available for security review
-- Community-audited privacy implementations
-- No hidden data collection or tracking
-
-## Changes to This Policy
-
-We will notify users of any material changes to this privacy policy through:
-- Updates to this document in our GitHub repository
-- Release notes for application updates
-- In-app notifications for significant privacy changes
-
-## Contact Us
-
-For privacy-related questions or concerns:
-- **GitHub Issues**: [Create an issue](https://github.com/Zackriya-Solutions/meeting-minutes/issues)
-- **Email**: [Contact form](https://www.zackriya.com/service-interest-form/)
-- **Community**: [Discord](https://discord.gg/crRymMQBFH)
-
-## Open Source Commitment
-
-As an open-source project under MIT license, you can:
-- Review our complete privacy implementation
-- Modify data handling to meet your requirements
-- Deploy entirely on your own infrastructure
-- Contribute to privacy improvements
-
----
-
-*This privacy policy applies to Meetily v0.0.5 and later versions. For enterprise deployments, additional privacy controls may be available.*
+Quire is built on the open-source Meetily project by Zackriya Solutions (MIT licence).
