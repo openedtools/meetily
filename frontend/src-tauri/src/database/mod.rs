@@ -1,3 +1,4 @@
+pub mod backup;
 pub mod commands;
 pub mod manager;
 pub mod models;

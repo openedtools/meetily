@@ -37,7 +37,18 @@ impl DatabaseManager {
         let options = SqliteConnectOptions::from_str(tauri_db_path)?.pragma("secure_delete", "ON");
         let pool = SqlitePoolOptions::new().connect_with(options).await?;
 
-        sqlx::migrate!("./migrations").run(&pool).await?;
+        let migrator = sqlx::migrate!("./migrations");
+        let newest_version = migrator.migrations.last().map(|m| m.version).unwrap_or(0);
+        // Migrations only go forward, so take a dated backup first. If the data cannot be
+        // protected, do not migrate: the error says why.
+        super::backup::backup_before_migration(
+            &pool,
+            Path::new(tauri_db_path),
+            newest_version,
+            chrono::Utc::now(),
+        )
+        .await?;
+        migrator.run(&pool).await?;
 
         Ok(DatabaseManager { pool })
     }
@@ -209,5 +220,84 @@ impl DatabaseManager {
         log::info!("Database connection pool closed");
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::sqlite::SqliteConnectOptions;
+    use sqlx::Row;
+    use std::borrow::Cow;
+
+    /// A database as an earlier build left it: every migration except the newest is applied.
+    async fn database_one_migration_behind(path: &Path) {
+        let options = SqliteConnectOptions::new().filename(path).create_if_missing(true);
+        let pool = SqlitePoolOptions::new().max_connections(1).connect_with(options).await.unwrap();
+        let mut migrator = sqlx::migrate!("./migrations");
+        let newest = migrator.migrations.last().unwrap().version;
+        migrator.migrations =
+            Cow::Owned(migrator.migrations.iter().filter(|m| m.version < newest).cloned().collect());
+        migrator.run(&pool).await.unwrap();
+        sqlx::query("INSERT INTO meetings (id, title, created_at, updated_at) VALUES ('keep-me', 'T', 'x', 'x')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    async fn opening_an_older_database_backs_it_up_and_then_migrates_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("meeting_minutes.sqlite");
+        database_one_migration_behind(&db).await;
+
+        let manager = DatabaseManager::new(db.to_str().unwrap(), "does-not-exist.db").await.unwrap();
+
+        // Migrated: the newest migration is now recorded and the data is still there
+        let newest = sqlx::migrate!("./migrations").migrations.last().unwrap().version;
+        let applied: i64 = sqlx::query_scalar("SELECT MAX(version) FROM _sqlx_migrations")
+            .fetch_one(manager.pool())
+            .await
+            .unwrap();
+        assert_eq!(applied, newest);
+        let n: i64 = sqlx::query("SELECT COUNT(*) AS n FROM meetings").fetch_one(manager.pool()).await.unwrap().get("n");
+        assert_eq!(n, 1);
+
+        // And a backup of the pre-migration state exists
+        let backups: Vec<_> = std::fs::read_dir(super::super::backup::backups_dir(&db))
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().to_string())
+            .filter(|n| n.ends_with(".bak"))
+            .collect();
+        assert_eq!(backups.len(), 1, "{backups:?}");
+    }
+
+    #[tokio::test]
+    async fn opening_a_current_database_again_makes_no_new_backup() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("meeting_minutes.sqlite");
+        database_one_migration_behind(&db).await;
+        let first = DatabaseManager::new(db.to_str().unwrap(), "none.db").await.unwrap();
+        first.pool().close().await;
+        let second = DatabaseManager::new(db.to_str().unwrap(), "none.db").await.unwrap();
+        second.pool().close().await;
+
+        let count = std::fs::read_dir(super::super::backup::backups_dir(&db))
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().ends_with(".bak"))
+            .count();
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn a_brand_new_database_is_created_without_any_backup() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("meeting_minutes.sqlite");
+        let manager = DatabaseManager::new(db.to_str().unwrap(), "none.db").await.unwrap();
+        manager.pool().close().await;
+        assert!(!super::super::backup::backups_dir(&db).exists());
     }
 }
