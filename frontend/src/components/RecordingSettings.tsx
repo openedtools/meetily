@@ -86,7 +86,7 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
     setPreferences(newPreferences);
     // Sync the in-memory selection ConfigContext exposes to the start path.
     // Without this, the picker only writes to disk (loaded into context once at
-    // app mount), so a newly-chosen mic isn't honored until the next launch —
+    // app mount), so a newly-chosen mic isn't honored until the next launch:
     // start keeps sending the stale launch-time device.
     setSelectedDevices(devices);
     await savePreferences(newPreferences);

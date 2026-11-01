@@ -271,7 +271,7 @@ impl ContinuousVadProcessor {
                     // position, producing a start timestamp of roughly 2x the true one.
                     //
                     // The only reader is the end-of-recording flush below, so the bug
-                    // surfaced once per recording, on the final segment — which landed at
+                    // surfaced once per recording, on the final segment - which landed at
                     // ~2x the file duration and sorted to the end of the transcript.
                     self.speech_start_sample = timestamp_ms * VAD_SAMPLE_RATE as usize / 1000;
                     self.current_speech.clear();

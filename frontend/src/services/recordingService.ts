@@ -27,7 +27,7 @@ export interface RecordingStoppedPayload {
 // the UI into ERROR instead of an eternal STARTING spinner.
 const START_TIMEOUT_MS = 120000;
 
-// ponytail: on timeout we only reject — no auto stop_recording. Calling stop
+// ponytail: on timeout we only reject - no auto stop_recording. Calling stop
 // against a stuck start could itself block; the ERROR state lets the user
 // retry and the backend engine-lifecycle lock serializes that retry.
 function withStartTimeout<T>(promise: Promise<T>): Promise<T> {
@@ -207,7 +207,7 @@ export class RecordingService {
   }
 
   /**
-   * Listen for mic-unavailable event (no usable microphone at recording start —
+   * Listen for mic-unavailable event (no usable microphone at recording start:
    * recording proceeds with system audio only)
    * @param callback - Function to call when no microphone is available
    * @returns Promise that resolves to unlisten function

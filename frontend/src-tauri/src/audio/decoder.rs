@@ -157,7 +157,7 @@ fn chunked_resample_with_progress(
         input.len()
     );
 
-    // Resample all chunks in parallel — each is independent and CPU-bound
+    // Resample all chunks in parallel - each is independent and CPU-bound
     let resampled_chunks: Vec<Result<Vec<f32>>> = chunk_ranges
         .par_iter()
         .map(|&(chunk_start, chunk_end)| {

@@ -759,19 +759,19 @@ mod tests {
 
     #[test]
     fn test_strip_title_if_present_no_heading_preserved() {
-        // Distinct from strip_leading_title which returns "" — this preserves input.
+        // Distinct from strip_leading_title which returns "" - this preserves input.
         assert_eq!(strip_title_if_present("Just body text"), "Just body text");
     }
 
     #[test]
     fn test_strip_title_if_present_hash_no_space_preserved() {
-        // `#NoSpace` is not a markdown H1 — preserve.
+        // `#NoSpace` is not a markdown H1 - preserve.
         assert_eq!(strip_title_if_present("#NoSpace\nbody"), "#NoSpace\nbody");
     }
 
     #[test]
     fn test_strip_title_if_present_mid_document_h1_preserved() {
-        // H1 after body content must NOT be stripped — guards the asymmetry where
+        // H1 after body content must NOT be stripped - guards the asymmetry where
         // extract_meeting_name_from_markdown scans every line for "# ".
         let input = "Some paragraph\n\n# H1 on line 3\n## Section\nbody";
         assert_eq!(strip_title_if_present(input), input);

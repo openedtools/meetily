@@ -39,13 +39,13 @@ pub use super::transcription::TranscriptUpdate;
 static IS_RECORDING: AtomicBool = AtomicBool::new(false);
 
 /// True for the whole `stop_recording` tail (manager taken -> `recording-stopped`
-/// emitted). `IS_RECORDING` must stay true through the tail — the frontend polls
-/// it to keep the stop UI up — so the mic-disconnect fallback checks this flag
+/// emitted). `IS_RECORDING` must stay true through the tail - the frontend polls
+/// it to keep the stop UI up - so the mic-disconnect fallback checks this flag
 /// too, otherwise a fallback queued before Stop retries against a taken manager
 /// and surfaces a spurious "Microphone fallback failed" toast.
 static IS_RECORDING_STOPPING: AtomicBool = AtomicBool::new(false);
 
-/// Recording is live and not being torn down — the only state in which the
+/// Recording is live and not being torn down - the only state in which the
 /// mic-disconnect fallback should run or report.
 fn recording_live() -> bool {
     IS_RECORDING.load(Ordering::SeqCst) && !IS_RECORDING_STOPPING.load(Ordering::SeqCst)
@@ -56,7 +56,7 @@ fn recording_live() -> bool {
 /// after a Stop/Start swapped the manager out from under an in-flight task.
 ///
 /// NOTE: this locks `RECORDING_MANAGER`. Never call it while already holding
-/// that lock (e.g. inside a `RECORDING_MANAGER.lock()` scope) — the std Mutex
+/// that lock (e.g. inside a `RECORDING_MANAGER.lock()` scope) - the std Mutex
 /// is non-reentrant and it would self-deadlock. All current callers invoke it
 /// outside any held lock; keep it that way.
 fn session_live(s: &Arc<super::RecordingState>) -> bool {
@@ -69,13 +69,13 @@ fn session_live(s: &Arc<super::RecordingState>) -> bool {
 }
 
 /// RAII guard for the stop-tail flag. Sets `IS_RECORDING_STOPPING` true on
-/// construction and clears it on Drop — including during unwind — so a panic
+/// construction and clears it on Drop - including during unwind - so a panic
 /// anywhere in the ~320-line stop tail can't leave the flag stuck true and
 /// silently kill the mic-disconnect fallback for every later recording.
 ///
 /// This unwind-clears behaviour depends on `panic = "unwind"` (the default).
 /// If a release profile ever sets `panic = "abort"`, Drop won't run on panic
-/// and the stuck-flag failure mode returns — add a start-time reset then.
+/// and the stuck-flag failure mode returns - add a start-time reset then.
 struct StoppingGuard;
 impl StoppingGuard {
     fn new() -> Self {
@@ -162,19 +162,19 @@ fn map_recording_start_error<R: Runtime>(
 /// NOT "record without a mic". A specifically-requested mic that isn't in
 /// cpal's current enumeration (a stale saved device, or a Continuity
 /// "iPhone Microphone" that isn't available right now) is downgraded to the
-/// system default — the same `default_input_device()` helper the
-/// mid-recording disconnect path uses — so start never hard-fails with
+/// system default - the same `default_input_device()` helper the
+/// mid-recording disconnect path uses - so start never hard-fails with
 /// "Device not found".
 ///
 /// Emits at most one event per call:
-/// - `mic-device-switched` — a specific mic was requested but unavailable,
+/// - `mic-device-switched` - a specific mic was requested but unavailable,
 ///   and we fell back to the default (reuses the existing frontend listener).
-/// - `mic-unavailable` — no usable mic at all; recording proceeds with
+/// - `mic-unavailable` - no usable mic at all; recording proceeds with
 ///   system audio only. If system audio is also unavailable, start_streams'
 ///   own guard reports it.
 /// Resolving `None` to the default is the user's actual choice, so it's silent.
 ///
-/// ponytail: sync pre-flight substitution (matches Pro), not catch-and-retry —
+/// ponytail: sync pre-flight substitution (matches Pro), not catch-and-retry:
 /// stream.rs keeps its hard-fail as the last line of defense. cpal calls
 /// block briefly either way.
 fn resolve_mic_or_default<R: Runtime>(
@@ -197,13 +197,13 @@ fn resolve_mic_or_default<R: Runtime>(
                     return Some(Arc::new(device));
                 }
                 warn!(
-                    "⚠️ Requested mic '{}' not enumerated — falling back to system default",
+                    "⚠️ Requested mic '{}' not enumerated - falling back to system default",
                     device.name
                 );
             }
             Err(e) => {
                 warn!(
-                    "⚠️ Requested mic '{}' not available: {} — falling back to system default",
+                    "⚠️ Requested mic '{}' not available: {} - falling back to system default",
                     name, e
                 );
             }
@@ -225,7 +225,7 @@ fn resolve_mic_or_default<R: Runtime>(
             Some(Arc::new(device))
         }
         Err(e) => {
-            warn!("❌ No microphone available: {} — recording system audio only", e);
+            warn!("❌ No microphone available: {} - recording system audio only", e);
             let _ = app.emit("mic-unavailable", serde_json::json!({}));
             None
         }
@@ -235,9 +235,9 @@ fn resolve_mic_or_default<R: Runtime>(
 /// System-audio analog of `resolve_mic_or_default`: `Some(name)` -> parse it,
 /// falling back to the default output if unparseable; `None` ("Default System
 /// Audio" in the UI) -> default output. Returns `None` only when no output
-/// device exists — system audio is optional, mic-only recording proceeds.
+/// device exists - system audio is optional, mic-only recording proceeds.
 ///
-/// ponytail: no cpal enumeration check (unlike the mic helper) — Linux system
+/// ponytail: no cpal enumeration check (unlike the mic helper) - Linux system
 /// devices are Pulse/ALSA monitor *inputs* tagged Output, so output_devices()
 /// would false-negative them. stream.rs still hard-fails on a missing device.
 fn resolve_system_or_default(requested_name: Option<&str>) -> Option<Arc<super::AudioDevice>> {
@@ -248,7 +248,7 @@ fn resolve_system_or_default(requested_name: Option<&str>) -> Option<Arc<super::
                 return Some(Arc::new(device));
             }
             Err(e) => warn!(
-                "⚠️ Requested system audio '{}' not available: {} — falling back to system default",
+                "⚠️ Requested system audio '{}' not available: {} - falling back to system default",
                 name, e
             ),
         }
@@ -260,7 +260,7 @@ fn resolve_system_or_default(requested_name: Option<&str>) -> Option<Arc<super::
             Some(Arc::new(device))
         }
         Err(e) => {
-            warn!("⚠️ No system audio available: {} — recording will continue with microphone only", e);
+            warn!("⚠️ No system audio available: {} - recording will continue with microphone only", e);
             None
         }
     }
@@ -283,7 +283,7 @@ async fn prepare_audio_for_recording(
         });
     if let Some(name) = wake_name {
         if let Err(e) = super::recording_manager::wake_audio_connection(&name).await {
-            warn!("[AUDIO_WAKE] Wake failed: {} — proceeding anyway", e);
+            warn!("[AUDIO_WAKE] Wake failed: {} - proceeding anyway", e);
         }
     }
 
@@ -423,7 +423,7 @@ pub async fn start_recording_with_meeting_name<R: Runtime>(
     }
 
     // Flip recording live + reset per-session flags (speech-detected latch,
-    // mic-recovery budget). Shared with the other start path — see helper.
+    // mic-recovery budget). Shared with the other start path - see helper.
     finalize_recording_start();
     drop(engine_lifecycle_guard);
 
@@ -610,7 +610,7 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
     }
 
     // Flip recording live + reset per-session flags (speech-detected latch,
-    // mic-recovery budget). Shared with the other start path — see helper.
+    // mic-recovery budget). Shared with the other start path - see helper.
     finalize_recording_start();
     drop(engine_lifecycle_guard);
 
@@ -705,7 +705,7 @@ pub async fn stop_recording<R: Runtime>(
 
     // Mark the stop tail as in progress so a mic-disconnect fallback that was
     // queued before Stop short-circuits instead of retrying against the taken
-    // manager. IS_RECORDING itself stays true until the tail completes — the
+    // manager. IS_RECORDING itself stays true until the tail completes - the
     // frontend polls it to keep the stop UI up. RAII so a panic in the tail
     // below can't leave the flag stuck true.
     let _stopping_guard = StoppingGuard::new();
@@ -1173,7 +1173,7 @@ pub async fn get_active_audio_output() -> Result<super::playback_monitor::AudioO
 // ============================================================================
 
 // Guard against concurrent mic hot-swap tasks. Only used by the disconnect
-// fallback path (trigger_mic_fallback_to_default) — the "chase the new
+// fallback path (trigger_mic_fallback_to_default) - the "chase the new
 // default" auto-swap has been removed.
 static MIC_SWAP_IN_PROGRESS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
@@ -1182,7 +1182,7 @@ static MIC_SWAP_IN_PROGRESS: std::sync::atomic::AtomicBool = std::sync::atomic::
 static MIC_FALLBACK_FAILED_ATTEMPTS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 const MAX_MIC_FALLBACK_ATTEMPTS: u32 = 3;
 
-/// Perform mic hot-swap using phased locking — never holds RECORDING_MANAGER during I/O
+/// Perform mic hot-swap using phased locking - never holds RECORDING_MANAGER during I/O
 /// except the brief mic-stream stop in Phase 1.
 /// If CPAL hangs during stream creation, only this task blocks; stop flow stays unblocked.
 async fn perform_mic_hot_swap_task<R: Runtime>(
@@ -1204,7 +1204,7 @@ async fn perform_mic_hot_swap_task<R: Runtime>(
             if !session_live(session) {
                 return Err(e);
             }
-            warn!("[HOT_SWAP] First attempt failed: {} — retrying in 500ms", e);
+            warn!("[HOT_SWAP] First attempt failed: {} - retrying in 500ms", e);
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
             match do_mic_swap(&new_device_name, session).await {
@@ -1230,22 +1230,22 @@ async fn perform_mic_hot_swap_task<R: Runtime>(
     }
 }
 
-/// Phased mic swap — lock is never held during async I/O.
+/// Phased mic swap - lock is never held during async I/O.
 async fn do_mic_swap(device_name: &str, session: &Arc<super::RecordingState>) -> Result<(), String> {
-    // Phase 1: Lock briefly — verify identity, take old stream OUT (no teardown under lock)
+    // Phase 1: Lock briefly - verify identity, take old stream OUT (no teardown under lock)
     let old_mic = {
         let mut guard = RECORDING_MANAGER.lock().unwrap();
         let manager = guard.as_mut().ok_or_else(|| "Recording manager not available".to_string())?;
         if !manager.is_recording() {
-            return Err("Recording stopped — aborting mic hot-swap".to_string());
+            return Err("Recording stopped, so the microphone switch was cancelled".to_string());
         }
         if !Arc::ptr_eq(manager.get_state(), session) {
-            return Err("Session changed before hot-swap — aborting".to_string());
+            return Err("The recording session changed before the microphone switch, so it was cancelled".to_string());
         }
         manager.take_mic_stream_for_swap()
     }; // lock released
 
-    // Tear down the dead mic OUTSIDE the lock — cpal stop()/drop on a
+    // Tear down the dead mic OUTSIDE the lock - cpal stop()/drop on a
     // disconnected BT device can stall on the CoreAudio HAL lock; doing it
     // under RECORDING_MANAGER would freeze stop_recording (deep-review #2).
     // Non-fatal: the replacement stream is created next regardless, so a
@@ -1256,10 +1256,10 @@ async fn do_mic_swap(device_name: &str, session: &Arc<super::RecordingState>) ->
         }
     }
 
-    // Phase 2: Async I/O WITHOUT lock — may be slow, that's OK
+    // Phase 2: Async I/O WITHOUT lock - may be slow, that's OK
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-    // Build the AudioDevice directly from the name — the caller
+    // Build the AudioDevice directly from the name - the caller
     // (trigger_mic_fallback_to_default) already resolved it via
     // default_input_device(). Skipping list_audio_devices() here avoids a
     // full cpal enumeration on the exact BT-transition hot path where it's
@@ -1279,11 +1279,11 @@ async fn do_mic_swap(device_name: &str, session: &Arc<super::RecordingState>) ->
         None,
     ).await.map_err(|e| format!("Failed to create mic stream: {}", e))?;
 
-    // Resolve the current default output OUTSIDE the lock — a CoreAudio stall here
+    // Resolve the current default output OUTSIDE the lock - a CoreAudio stall here
     // must not block stop_recording (which needs RECORDING_MANAGER). (P1 #1)
     let system_name = default_output_device().ok().map(|d| d.name);
 
-    // Phase 3: Lock briefly — install ONLY if still the same session
+    // Phase 3: Lock briefly - install ONLY if still the same session
     {
         let mut guard = RECORDING_MANAGER.lock().unwrap();
         match guard.as_mut() {
@@ -1292,7 +1292,7 @@ async fn do_mic_swap(device_name: &str, session: &Arc<super::RecordingState>) ->
                 info!("[HOT_SWAP] Mic hot-swap to '{}' completed", device_name);
             }
             Some(_) => {
-                return Err("Session changed during hot-swap — discarding stale mic stream".to_string());
+                return Err("The recording session changed during the microphone switch, so the new microphone stream was discarded".to_string());
             }
             None => {
                 return Err("Recording manager gone during hot-swap".to_string());
@@ -1307,7 +1307,7 @@ async fn do_mic_swap(device_name: &str, session: &Arc<super::RecordingState>) ->
 ///
 /// The ONLY mid-recording mic switch that is allowed is the fallback from a
 /// dead device to the system default, triggered by the device monitor's
-/// DeviceDisconnected event. Any other device event is explicitly ignored —
+/// DeviceDisconnected event. Any other device event is explicitly ignored:
 /// recording stays on whatever device was picked at start time until the
 /// meeting ends.
 ///
@@ -1329,7 +1329,7 @@ fn spawn_device_event_processor<R: Runtime>(
         while let Some(event) = receiver.recv().await {
             // Skip if recording has stopped
             if !recording_live() {
-                info!("[DEVICE_EVENTS] Recording stopped — ignoring event: {:?}", event);
+                info!("[DEVICE_EVENTS] Recording stopped - ignoring event: {:?}", event);
                 continue;
             }
 
@@ -1352,8 +1352,8 @@ fn spawn_device_event_processor<R: Runtime>(
                 DeviceEvent::DeviceReconnected { ref device_name, ref device_type } => {
                     // Per product decision: once we have fallen back to the
                     // built-in mic we stay there for the rest of the meeting.
-                    // This is intentional — just log and do nothing.
-                    info!("[DEVICE_EVENTS] Device reconnected: '{}' ({:?}) — staying on current mic (fallback is sticky)", device_name, device_type);
+                    // This is intentional - just log and do nothing.
+                    info!("[DEVICE_EVENTS] Device reconnected: '{}' ({:?}) - staying on current mic (fallback is sticky)", device_name, device_type);
                 }
                 DeviceEvent::DeviceListChanged => {
                     debug!("[DEVICE_EVENTS] Device list changed");
@@ -1371,7 +1371,7 @@ fn spawn_device_event_processor<R: Runtime>(
 ///
 /// `disconnected_name` is the device that just died. We keep it to detect
 /// the edge case where macOS hasn't yet updated the system default input
-/// away from the dead device — we wait and retry in that case rather than
+/// away from the dead device - we wait and retry in that case rather than
 /// swapping back to the same broken device.
 ///
 /// This function takes the MIC_SWAP_IN_PROGRESS guard itself; the caller
@@ -1384,7 +1384,7 @@ async fn trigger_mic_fallback_to_default<R: Runtime>(
 ) {
     if !session_live(&session) {
         info!(
-            "[MIC_FALLBACK] Not recording — skipping fallback for '{}'",
+            "[MIC_FALLBACK] Not recording - skipping fallback for '{}'",
             disconnected_name
         );
         return;
@@ -1392,7 +1392,7 @@ async fn trigger_mic_fallback_to_default<R: Runtime>(
 
     if MIC_FALLBACK_FAILED_ATTEMPTS.load(Ordering::SeqCst) >= MAX_MIC_FALLBACK_ATTEMPTS {
         warn!(
-            "[MIC_FALLBACK] {} failed attempts reached — giving up on '{}' (terminal event already announced)",
+            "[MIC_FALLBACK] {} failed attempts reached - giving up on '{}' (terminal event already announced)",
             MAX_MIC_FALLBACK_ATTEMPTS, disconnected_name
         );
         return;
@@ -1403,7 +1403,7 @@ async fn trigger_mic_fallback_to_default<R: Runtime>(
         .is_err()
     {
         info!(
-            "[MIC_FALLBACK] Swap already in progress — skipping fallback for '{}'",
+            "[MIC_FALLBACK] Swap already in progress - skipping fallback for '{}'",
             disconnected_name
         );
         return;
@@ -1429,16 +1429,16 @@ async fn trigger_mic_fallback_to_default<R: Runtime>(
     // default when an explicitly-selected BT device disconnects.
     tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
 
-    // A Stop-A/Start-B during the sleep swapped our session out. Bail silently —
+    // A Stop-A/Start-B during the sleep swapped our session out. Bail silently:
     // emitting or spending the recovery budget here would fire against B with
     // A's device. Covers the default_input_device() error branch below.
     if !session_live(&session) {
-        info!("[MIC_FALLBACK] Session no longer live after wait — aborting fallback for '{}'", disconnected_name);
+        info!("[MIC_FALLBACK] Session no longer live after wait - aborting fallback for '{}'", disconnected_name);
         return;
     }
 
     // Query the current system default input. If it still reports the
-    // disconnected device, back off once more and re-query — this handles
+    // disconnected device, back off once more and re-query - this handles
     // the edge case where the OS hasn't propagated the change yet.
     let fallback_name = match default_input_device() {
         Ok(dev) => dev.name,
@@ -1464,19 +1464,19 @@ async fn trigger_mic_fallback_to_default<R: Runtime>(
 
     let fallback_name = if fallback_name == disconnected_name {
         warn!(
-            "[MIC_FALLBACK] Default input still reports disconnected device '{}' — retrying after 300ms",
+            "[MIC_FALLBACK] Default input still reports disconnected device '{}' - retrying after 300ms",
             disconnected_name
         );
         tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
         if !session_live(&session) {
-            info!("[MIC_FALLBACK] Session no longer live after retry wait — aborting fallback for '{}'", disconnected_name);
+            info!("[MIC_FALLBACK] Session no longer live after retry wait - aborting fallback for '{}'", disconnected_name);
             return;
         }
         match default_input_device() {
             Ok(dev) if dev.name != disconnected_name => dev.name,
             Ok(dev) => {
                 error!(
-                    "[MIC_FALLBACK] Default input still '{}' after retry — aborting fallback",
+                    "[MIC_FALLBACK] Default input still '{}' after retry - aborting fallback",
                     dev.name
                 );
                 let _ = app.emit(
@@ -1523,26 +1523,26 @@ async fn trigger_mic_fallback_to_default<R: Runtime>(
         disconnected_name, fallback_name
     );
 
-    // macOS Core Audio pre-wake for the hot-swap path — before we call the
+    // macOS Core Audio pre-wake for the hot-swap path - before we call the
     // rebuild path (which internally calls `AudioDeviceStart` on the new
     // mic), play 150ms of digital silence through the current system
     // output device to force the Core Audio hardware unit out of its idle
     // power state. Without this, `AudioDeviceStart` can return `noErr` but
     // the IO proc will not fire for 10-30 seconds until some other audio
-    // nudges the hardware awake — the "backend idle until you play YouTube"
+    // nudges the hardware awake - the "backend idle until you play YouTube"
     // symptom from earlier testing.
     //
     // `wake_audio_connection_for_swap` has a built-in fallback: if the
     // current system device name doesn't enumerate (e.g. the BT output just
     // disappeared), it plays through `default_output_device()` instead,
-    // which on macOS will now be the built-in speakers — exactly the
+    // which on macOS will now be the built-in speakers - exactly the
     // hardware unit we want to wake for the fallback mic.
     //
     // Non-fatal: on error we log and proceed to the swap anyway. A failed
     // wake is strictly better than no wake.
     #[cfg(target_os = "macos")]
     {
-        // Read from the captured session directly (no manager lock) — this
+        // Read from the captured session directly (no manager lock) - this
         // stays correct even if the global manager has since been swapped by
         // a Stop/Start of a different session.
         let sys_device_name = session.get_system_device().map(|d| d.name.clone());
@@ -1550,19 +1550,19 @@ async fn trigger_mic_fallback_to_default<R: Runtime>(
             match super::recording_manager::wake_audio_connection_for_swap(&name).await {
                 Ok(()) => info!("[MIC_FALLBACK] Pre-swap audio wake completed"),
                 Err(e) => warn!(
-                    "[MIC_FALLBACK] Pre-swap audio wake failed: {} — proceeding anyway",
+                    "[MIC_FALLBACK] Pre-swap audio wake failed: {} - proceeding anyway",
                     e
                 ),
             }
         } else {
-            log::debug!("[MIC_FALLBACK] No system device recorded — skipping pre-swap wake");
+            log::debug!("[MIC_FALLBACK] No system device recorded - skipping pre-swap wake");
         }
     }
 
-    // Stop may have started during the sleeps above — bail before touching
+    // Stop may have started during the sleeps above - bail before touching
     // the (possibly already taken) manager.
     if !session_live(&session) {
-        info!("[MIC_FALLBACK] Recording stopping — aborting fallback for '{}'", disconnected_name);
+        info!("[MIC_FALLBACK] Recording stopping - aborting fallback for '{}'", disconnected_name);
         return;
     }
 

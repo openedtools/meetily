@@ -72,18 +72,18 @@ export function DeviceSelection({ selectedDevices, onDeviceChange, disabled = fa
 
   // Auto-select the default when a previously-selected device is no longer
   // available (e.g. AirPods that have since disconnected). Without this the
-  // dropdown keeps showing a device that's gone — Radix Select renders an
-  // empty/stale trigger for a value not among its options — and start would
+  // dropdown keeps showing a device that's gone - Radix Select renders an
+  // empty/stale trigger for a value not among its options - and start would
   // send a name the backend can't open. Matches Pro's DeviceSelection prune.
   //
   // Format trap: selected values carry the " (input)"/" (output)" suffix (the
-  // SelectItem value form below), while enumeration returns raw device names —
+  // SelectItem value form below), while enumeration returns raw device names:
   // so compare against the suffixed form, else every non-default selection is
   // wrongly pruned.
   //
   // ponytail: enumeration-driven prune only (fires on mount + manual refresh).
   // We deliberately do NOT mutate the selection from the mic-device-switched
-  // event — that stays toast-only; reopening Settings after a meeting refetches
+  // event - that stays toast-only; reopening Settings after a meeting refetches
   // and prunes. onDeviceChange is held in a ref so the effect isn't re-run by
   // the parent passing a fresh (non-memoized) handler each render.
   const onDeviceChangeRef = useRef(onDeviceChange);
@@ -91,7 +91,7 @@ export function DeviceSelection({ selectedDevices, onDeviceChange, disabled = fa
 
   useEffect(() => {
     // Skip while loading (list not ready) or disabled (selector locked during
-    // recording — never reset the device a live recording is using).
+    // recording - never reset the device a live recording is using).
     if (loading || disabled) return;
 
     const inputs = devices.filter(d => d.device_type === 'Input');
@@ -105,7 +105,7 @@ export function DeviceSelection({ selectedDevices, onDeviceChange, disabled = fa
       inputs.length > 0 &&
       !inputs.some(d => `${d.name} (input)` === selectedDevices.micDevice)
     ) {
-      console.warn(`[DeviceSelection] Selected mic '${selectedDevices.micDevice}' not available — resetting to default`);
+      console.warn(`[DeviceSelection] Selected mic '${selectedDevices.micDevice}' not available - resetting to default`);
       next = { ...next, micDevice: null };
     }
     if (
@@ -113,7 +113,7 @@ export function DeviceSelection({ selectedDevices, onDeviceChange, disabled = fa
       outputs.length > 0 &&
       !outputs.some(d => `${d.name} (output)` === selectedDevices.systemDevice)
     ) {
-      console.warn(`[DeviceSelection] Selected system audio '${selectedDevices.systemDevice}' not available — resetting to default`);
+      console.warn(`[DeviceSelection] Selected system audio '${selectedDevices.systemDevice}' not available - resetting to default`);
       next = { ...next, systemDevice: null };
     }
 

@@ -97,7 +97,7 @@ struct DeviceChangeListenerGuard {
 
 // SAFETY: data_ptr points to a Box<ListenerCallbackData> whose fields are Send + Sync.
 // The pointer is created in register_device_change_listeners() and only
-// used for cleanup in Drop — always on the same tokio task.
+// used for cleanup in Drop - always on the same tokio task.
 #[cfg(target_os = "macos")]
 unsafe impl Send for DeviceChangeListenerGuard {}
 
@@ -114,7 +114,7 @@ impl Drop for DeviceChangeListenerGuard {
         // AudioObjectRemovePropertyListener does not fence in-flight callbacks: a
         // callback already dispatched on Core Audio's internal queue can still
         // dereference this pointer after removal returns, so freeing here would be a
-        // use-after-free. The leak is bounded — one allocation per recording session,
+        // use-after-free. The leak is bounded - one allocation per recording session,
         // reclaimed at app exit. Same tradeoff as the Core Audio listeners in
         // system_detector.rs.
         // unsafe { let _ = Box::from_raw(self.data_ptr); }
@@ -132,7 +132,7 @@ extern "C-unwind" fn device_list_changed_callback(
 ) -> os::Status {
     let data = unsafe { &*(client_data as *const ListenerCallbackData) };
     data.notify.notify_one();
-    debug!("Core Audio device list changed — waking monitor loop");
+    debug!("Core Audio device list changed - waking monitor loop");
     os::Status::NO_ERR
 }
 
@@ -145,7 +145,7 @@ fn register_device_change_listeners(
     let data_ptr = Box::into_raw(Box::new(ListenerCallbackData { notify }));
     let ptr = data_ptr as *mut ();
 
-    // Register HW_DEVICES listener (required — bail if fails)
+    // Register HW_DEVICES listener (required - bail if fails)
     match ca::System::OBJ.add_prop_listener(
         &ca::PropSelector::HW_DEVICES.global_addr(),
         device_list_changed_callback,
@@ -198,7 +198,7 @@ impl AudioDeviceMonitor {
 
     /// Notify the monitor that the mic has been hot-swapped to a new device.
     /// Optionally also update the system audio tracked name (since BT devices
-    /// like AirPods are often both mic AND speaker — when they disconnect,
+    /// like AirPods are often both mic AND speaker - when they disconnect,
     /// both entries go stale). The monitor loop picks this up on its next
     /// poll cycle.
     pub fn notify_mic_swapped(&self, new_mic_name: String, new_system_name: Option<String>) {
@@ -290,7 +290,7 @@ impl AudioDeviceMonitor {
                     break;
                 }
                 _ = device_change_notify.notified() => {
-                    debug!("Device monitor woken by Core Audio callback — checking devices immediately");
+                    debug!("Device monitor woken by Core Audio callback - checking devices immediately");
                     // Fall through to poll/diff below
                 }
                 _ = tokio::time::sleep(check_interval) => {

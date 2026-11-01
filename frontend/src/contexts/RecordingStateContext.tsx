@@ -231,16 +231,16 @@ export function RecordingStateProvider({ children }: { children: React.ReactNode
    * Global mic hot-swap UI feedback.
    *
    * The Rust backend emits `mic-device-switched` whenever the recording mic
-   * changes without the user picking it — on a successful mid-recording
+   * changes without the user picking it - on a successful mid-recording
    * disconnect fallback, and when a selected mic isn't available at start and
-   * the backend falls back to the default — and `mic-swap-failed` when
+   * the backend falls back to the default - and `mic-swap-failed` when
    * mid-recording recovery fails. Nothing else in the app listens for these,
    * so without this effect the switch is silent (or a dead-mic recording).
    * Mounting the listener here surfaces a toast regardless of which page the
-   * user is on. Pure UI feedback — no state mutation, no persisted-preference
+   * user is on. Pure UI feedback - no state mutation, no persisted-preference
    * writes.
    */
-  // Ref tracks latest isRecording for the mount-once listener below — the
+  // Ref tracks latest isRecording for the mount-once listener below - the
   // effect has [] deps so it can't read state directly (it would capture the
   // initial value). Kept current by this small sync effect.
   const isRecordingRef = useRef(false);
@@ -276,7 +276,7 @@ export function RecordingStateProvider({ children }: { children: React.ReactNode
           console.error('[RecordingStateContext] mic-swap-failed →', device_name, error);
           // Only alarm the user if recording is still active. A Stop clicked
           // during a hot-swap race fails with "Recording manager not
-          // available" — expected, not an error worth a toast.
+          // available" - expected, not an error worth a toast.
           if (isRecordingRef.current) {
             toast.error(
               `Microphone fallback failed for ${device_name}: ${error}`,
@@ -292,7 +292,7 @@ export function RecordingStateProvider({ children }: { children: React.ReactNode
           // Fires at recording start, before isRecording flips true, so this
           // is intentionally NOT gated by isRecordingRef.
           toast.error(
-            'No microphone available — recording system audio only.',
+            'No microphone available. Recording system audio only.',
             { duration: 8000 }
           );
         });
@@ -301,11 +301,11 @@ export function RecordingStateProvider({ children }: { children: React.ReactNode
 
         const fnExhausted = await recordingService.onMicRecoveryExhausted(({ device_name }) => {
           console.error('[RecordingStateContext] mic-recovery-exhausted →', device_name);
-          // Fires mid-recording only — gate on the recording ref like
+          // Fires mid-recording only - gate on the recording ref like
           // mic-swap-failed so a stale event after Stop doesn't alarm the user.
           if (isRecordingRef.current) {
             toast.error(
-              `Microphone '${device_name}' could not be recovered — recording continues without a microphone. Stop and restart to fix.`,
+              `Microphone '${device_name}' could not be recovered. Recording continues without a microphone. Stop and restart to fix.`,
               { duration: 10000 }
             );
           }

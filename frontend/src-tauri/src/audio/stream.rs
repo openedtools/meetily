@@ -457,7 +457,7 @@ impl AudioStreamManager {
     }
 
     /// Take the microphone stream OUT of the manager, keeping system audio
-    /// running. The caller stops/drops it OUTSIDE any lock — a cpal teardown
+    /// running. The caller stops/drops it OUTSIDE any lock - a cpal teardown
     /// of a dead BT device can stall and must not block a held mutex.
     pub fn take_mic_stream(&mut self) -> Option<AudioStream> {
         self.microphone_stream.take()

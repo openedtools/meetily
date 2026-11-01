@@ -79,7 +79,7 @@ export function ImportAudioDialog({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [titleModifiedByUser, setTitleModifiedByUser] = useState(false);
 
-  // Always start as false — represents "dialog has not yet been opened".
+  // Always start as false - represents "dialog has not yet been opened".
   // Do NOT initialize from the `open` prop: if the component mounts with open=true
   // (e.g. drag-drop path), we still need the initialization effect to run.
   const prevOpenRef = useRef(false);

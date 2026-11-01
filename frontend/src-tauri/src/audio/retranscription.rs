@@ -396,7 +396,7 @@ async fn run_retranscription<R: Runtime>(
             all_transcripts.push((text, segment.start_timestamp_ms, segment.end_timestamp_ms));
             total_confidence += conf;
         } else {
-            debug!("Segment {}/{}: {:.1}s — empty transcription", i + 1, processable_count, segment_duration_sec);
+            debug!("Segment {}/{}: {:.1}s - empty transcription", i + 1, processable_count, segment_duration_sec);
         }
     }
 
@@ -943,7 +943,7 @@ mod tests {
         // No audio file → error
         assert!(find_audio_file(dir.path()).is_err());
 
-        // Create audio.mp4 — should be found first
+        // Create audio.mp4 - should be found first
         std::fs::write(dir.path().join("audio.mp4"), b"fake").unwrap();
         let found = find_audio_file(dir.path()).unwrap();
         assert_eq!(found.file_name().unwrap(), "audio.mp4");
@@ -976,7 +976,7 @@ mod tests {
     fn test_find_audio_file_priority_order() {
         let dir = tempfile::tempdir().unwrap();
 
-        // Create both audio.m4a and audio.mp4 — mp4 should win (listed first in candidates)
+        // Create both audio.m4a and audio.mp4 - mp4 should win (listed first in candidates)
         std::fs::write(dir.path().join("audio.m4a"), b"fake").unwrap();
         std::fs::write(dir.path().join("audio.mp4"), b"fake").unwrap();
         let found = find_audio_file(dir.path()).unwrap();

@@ -29,13 +29,13 @@ pub(crate) enum RecordingStartError {
 }
 
 // ============================================================================
-// macOS Core Audio "pre-wake" — ported from feat/audio-device-handling
+// macOS Core Audio "pre-wake" - ported from feat/audio-device-handling
 // (commit 8bf6af8b, with refinements from d266feac + 7107adc7 + a10f8e55).
 // ============================================================================
 //
 // When a macOS Mac has a Bluetooth device as the active audio output, the
-// built-in audio hardware unit — and, crucially, the BT audio connection
-// itself — can sit in a low-power state where registered IO procs do not
+// built-in audio hardware unit - and, crucially, the BT audio connection
+// itself - can sit in a low-power state where registered IO procs do not
 // fire even though `AudioDeviceStart` returned `noErr`. The symptom is a
 // 60–90 second "silent" period at recording start (or during a disconnect
 // fallback) where the mic is technically capturing but no samples reach
@@ -44,7 +44,7 @@ pub(crate) enum RecordingStartError {
 // The workaround, empirically validated by Sujith in the audio-device-
 // handling branch: briefly play 300 ms of digital silence through the
 // output device by name. The name-based enumeration is itself part of the
-// fix ("enumeration wake" — it forces the HAL to bring the device out of
+// fix ("enumeration wake" - it forces the HAL to bring the device out of
 // its idle power state). The subsequent `stream.play()` on the output
 // activates the hardware unit fully, at which point the built-in mic's
 // IO proc starts firing normally. Total cost: ~300 ms added to recording
@@ -85,7 +85,7 @@ fn wake_audio_connection_sync(speaker_device_name: &str) -> Result<()> {
             )?
         }
         cpal::SampleFormat::I16 => {
-            // BT HFP mode frequently picks I16 for the output config — without
+            // BT HFP mode frequently picks I16 for the output config - without
             // this branch the wake would error out exactly when we need it most.
             output_device.build_output_stream(
                 &config.into(),
@@ -111,7 +111,7 @@ fn wake_audio_connection_sync(speaker_device_name: &str) -> Result<()> {
 }
 
 /// Async wrapper around `wake_audio_connection_sync`. Used at recording start
-/// so the 300 ms sleep doesn't block the tokio runtime. Non-fatal — the caller
+/// so the 300 ms sleep doesn't block the tokio runtime. Non-fatal - the caller
 /// should log the error and proceed if this fails; recording will still work,
 /// it just may have the 60-90s silent startup on BT.
 #[cfg(target_os = "macos")]
@@ -145,7 +145,7 @@ pub async fn wake_audio_connection_for_swap(speaker_device_name: &str) -> Result
             .find(|d| d.name().ok().as_deref() == Some(&*name))
             .and_then(|d| d.default_output_config().ok().map(|c| (d, c)))
             .or_else(|| {
-                info!("[AUDIO_WAKE] '{}' not found or config failed — using default output device", name);
+                info!("[AUDIO_WAKE] '{}' not found or config failed - using default output device", name);
                 host.default_output_device()
                     .and_then(|d| d.default_output_config().ok().map(|c| (d, c)))
             })
@@ -584,7 +584,7 @@ impl RecordingManager {
         self.stream_manager.set_mic_stream(stream);
         // Notify the device monitor so it tracks the new mic (and updated
         // system output) instead of the dead ones (M8 fix). BT devices like
-        // AirPods are often both mic AND speaker — when they disconnect, both
+        // AirPods are often both mic AND speaker - when they disconnect, both
         // monitor entries go stale. `system_name` is the *current* default
         // output, resolved lock-free in Phase 2 by the caller (do_mic_swap)
         // so a CoreAudio stall can't happen under the RECORDING_MANAGER lock;
@@ -623,7 +623,7 @@ mod wake_tests {
 
     #[test]
     fn wake_fails_gracefully_for_unknown_device() {
-        // Nonexistent device name fails at the `find` step — no audio hardware needed.
+        // Nonexistent device name fails at the `find` step - no audio hardware needed.
         // Asserts the wake is non-fatal (returns Err, does not panic).
         assert!(wake_audio_connection_sync("__no_such_device__").is_err());
     }

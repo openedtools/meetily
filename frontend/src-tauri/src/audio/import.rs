@@ -606,7 +606,7 @@ async fn run_import<R: Runtime>(
             all_transcripts.push((text, segment.start_timestamp_ms, segment.end_timestamp_ms));
             total_confidence += conf;
         } else {
-            debug!("Segment {}/{}: {:.1}s — empty transcription", i + 1, processable_count, segment_duration_sec);
+            debug!("Segment {}/{}: {:.1}s - empty transcription", i + 1, processable_count, segment_duration_sec);
         }
     }
 
@@ -1112,7 +1112,7 @@ mod tests {
 
     #[test]
     fn test_split_segment_at_silence_short_segment() {
-        // Segment shorter than max — returned as-is
+        // Segment shorter than max - returned as-is
         let segment = crate::audio::vad::SpeechSegment {
             samples: vec![0.1; 16000], // 1 second
             start_timestamp_ms: 0.0,
@@ -1155,7 +1155,7 @@ mod tests {
 
     #[test]
     fn test_split_segment_at_silence_no_silence_uses_overlap() {
-        // Continuous speech (constant energy) — should still split with overlap
+        // Continuous speech (constant energy) - should still split with overlap
         let segment = crate::audio::vad::SpeechSegment {
             samples: vec![0.5f32; 60 * 16000], // 60 seconds of "speech"
             start_timestamp_ms: 0.0,

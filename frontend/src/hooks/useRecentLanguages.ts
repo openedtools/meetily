@@ -44,7 +44,7 @@ function writeToStorage(values: string[]): void {
   try {
     window.localStorage.setItem(MRU_KEY, JSON.stringify(values));
   } catch {
-    // Quota exceeded / incognito — cosmetic list only, silent.
+    // Quota exceeded / incognito - cosmetic list only, silent.
   }
 }
 

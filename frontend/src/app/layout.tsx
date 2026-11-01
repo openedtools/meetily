@@ -31,7 +31,7 @@ const sourceSans3 = Source_Sans_3({
   variable: '--font-source-sans-3',
 })
 
-// Module-level component — stable reference across RootLayout re-renders.
+// Module-level component - stable reference across RootLayout re-renders.
 // Defined here (not inside RootLayout) so React never sees a new function type
 // on re-render, which would cause unmount/remount and break initialization logic.
 function ConditionalImportDialog({

@@ -77,7 +77,7 @@ export const SpeakerChip = memo(function SpeakerChip({ transcriptId, speakerKey,
           'hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400',
           open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
         )}
-        title={speakerKey ? `${label} — click to change` : 'Assign a speaker to this line'}
+        title={speakerKey ? `${label} (click to change)` : 'Assign a speaker to this line'}
         aria-label={speakerKey ? `Speaker: ${label}. Change` : 'Assign speaker'}
       >
         <User className="h-3.5 w-3.5" />
@@ -152,7 +152,7 @@ export function NamePanel({
       <CommandInput placeholder="Type a name…" value={query} onValueChange={setQuery} />
       <CommandList>
         {/* Once something is typed there is always an "Add" or a match, so only hint when empty */}
-        {!typed && <CommandEmpty>No one saved yet — type a name</CommandEmpty>}
+        {!typed && <CommandEmpty>No one saved yet. Type a name</CommandEmpty>}
         {suggested.length > 0 && (
           <CommandGroup heading="Sounds like">
             {suggested.map((s) => (
@@ -199,7 +199,7 @@ export function NamePanel({
           </CommandGroup>
         )}
         {ctx.people.length > 0 && (
-          <CommandGroup heading={lineCount ? `People — applies to all ${lineCount} lines` : 'People'}>
+          <CommandGroup heading={lineCount ? `People (applies to all ${lineCount} lines)` : 'People'}>
             {ctx.people.map((p) => (
               <CommandItem key={p.id} value={p.name} onSelect={() => choose({ personId: p.id })}>
                 <Check className={cn('mr-2 h-4 w-4', speaker?.person_id === p.id ? 'opacity-100' : 'opacity-0')} />
