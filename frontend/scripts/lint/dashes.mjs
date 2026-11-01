@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMain, repoRoot, trackedFiles } from './lib.mjs';
 
-const EM_DASH = '—';
+const EM_DASH = String.fromCharCode(0x2014);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ALLOW_FILE = path.join(HERE, 'dashes.allow.json');
 const BINARY_EXT = new Set([

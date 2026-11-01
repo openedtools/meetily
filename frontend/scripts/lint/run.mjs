@@ -9,11 +9,12 @@ const FRONTEND = path.resolve(HERE, '..', '..');
 
 const CHECKS = [
   { name: 'dashes', script: 'dashes.mjs' },
+  { name: 'brand drift', script: '../brand-apply.mjs', args: ['--check'] },
 ];
 
 let failed = 0;
 for (const check of CHECKS) {
-  const r = spawnSync(process.execPath, [path.join(HERE, check.script)], { cwd: FRONTEND, stdio: 'inherit' });
+  const r = spawnSync(process.execPath, [path.join(HERE, check.script), ...(check.args ?? [])], { cwd: FRONTEND, stdio: 'inherit' });
   if (r.status !== 0) failed += 1;
 }
 if (failed) {

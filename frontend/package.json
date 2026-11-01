@@ -29,6 +29,8 @@
         "test": "bun test --isolate && node --test tests/lib/onboarding-summary-model.test.mjs",
         "lint": "node scripts/lint/run.mjs",
         "lint:dashes": "node scripts/lint/dashes.mjs",
+        "brand:apply": "node scripts/brand-apply.mjs",
+        "brand:check": "node scripts/brand-apply.mjs --check",
         "verify": "npm run typecheck && npm run lint && npm run test"
     },
     "dependencies": {

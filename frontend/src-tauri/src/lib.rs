@@ -35,9 +35,11 @@ pub(crate) use perf_trace;
 // Re-export async logging macros for external use (removed due to macro conflicts)
 
 // Declare audio module
+pub mod adopt;
 pub mod analytics;
 pub mod api;
 pub mod audio;
+pub mod brand_generated;
 pub mod config;
 pub mod console_utils;
 pub mod diarization;
@@ -449,6 +451,9 @@ pub fn get_language_preference_internal() -> Option<String> {
 
 pub fn run() {
     log::set_max_level(log::LevelFilter::Info);
+
+    // Offer data from the earlier product once, before any app state or database exists
+    adopt::maybe_adopt();
 
     let mut builder = tauri::Builder::default();
 

@@ -1,0 +1,17 @@
+{
+  "name": "Quire",
+  "slug": "quire",
+  "bundleId": "com.openedtools.notes",
+  "windowTitle": "Quire",
+  "tagline": "Meeting notes that stay on your computer.",
+  "vaultDirName": "Quire",
+  "upstreamCredit": "Based on Meetily by Zackriya Solutions (MIT licence)",
+  "legacy": {
+    "name": "Meetily",
+    "identifier": "com.meetily.ai",
+    "templatesDir": "Meetily",
+    "configDir": "meetily",
+    "recordingsDirName": "meetily-recordings",
+    "tempPrefix": ".meetily_decode_"
+  }
+}
