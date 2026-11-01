@@ -436,6 +436,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn an_adopted_database_opens_under_the_real_migrations_without_complaint() {
+        use crate::database::manager::DatabaseManager;
+        let (_root, old, new) = dirs();
+        fs::create_dir_all(&old).unwrap();
+
+        // The earlier app's database: fully migrated, with a meeting in it
+        let earlier = DatabaseManager::new(old.join(DB_FILE).to_str().unwrap(), "none.db").await.unwrap();
+        sqlx::query("INSERT INTO meetings (id, title, created_at, updated_at) VALUES ('m1', 'Weekly sync', 'x', 'x')")
+            .execute(earlier.pool())
+            .await
+            .unwrap();
+
+        adopt_async(&old, &new, &Extras::default()).await.unwrap();
+
+        // Opening the copy runs the migration check: matching checksums mean it is accepted as is,
+        // and nothing needs backing up because nothing is pending
+        let adopted = DatabaseManager::new(new.join(DB_FILE).to_str().unwrap(), "none.db").await.unwrap();
+        let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM meetings").fetch_one(adopted.pool()).await.unwrap();
+        assert_eq!(n, 1);
+        assert!(!crate::database::backup::backups_dir(&new.join(DB_FILE)).exists());
+    }
+
+    #[tokio::test]
     async fn the_old_folder_is_left_exactly_as_it_was() {
         let (_root, old, new) = dirs();
         let pool = old_install(&old).await;

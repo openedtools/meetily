@@ -207,3 +207,17 @@ AC-ID-1 to AC-ID-6, AC-UI-1 to AC-UI-8 (AC-UI-9 only if the illustration is supp
 | D. Live Q&A | Benchmark in two profiles (CPU and CUDA for the RTX 3070 Ti), context builder, Ask box | AC-QA-1 to 4, AC-QA-6, AC-QA-7 |
 | E. Vault export | Format library and fixtures, one-way export, Sync screen, disclosure | AC-SYNC-1, 2, 5, 6, 8, 9, export part of AC-NF-1 and AC-NF-2 |
 | F. Two-way sync | Import, conflicts, deletion propagation, after the device checks | AC-SYNC-3, 4, 7 |
+
+## Deviations from this plan (recorded as the work proceeds)
+
+| WP | Plan said | What was done | Why |
+|---|---|---|---|
+| WP2 | Copy the database file with its `-wal` and `-shm` files before the pool opens | `VACUUM INTO` a `.part` file after the pool opens, then rename | One consistent snapshot, includes rows still in the write-ahead log, no raw file pairs to keep in step. Same guarantees, tested including a WAL case |
+| WP1 | `.claude/hooks/protect-tests.sh` | `protect-tests.mjs`, run through `node` in exec form, and it also locks the inline `#[cfg(test)] mod` section of Rust files | Rust tests here are inline, so a path-only hook could not protect them. Exec form avoids quoting problems on Windows. Docs agent confirmed the settings keys and that `onFailure: block` needs Claude Code 2.1.295 or later (2.1.316 in use) |
+| WP1 | A `lint` runner | Custom checks: dashes (ratchet allowlist), brand drift, brand mentions. `pnpm lint` no longer means `next lint`, which never worked (ESLint is not installed) | Plan baseline finding |
+| WP3 | `legacy.rs` and `legacy.ts` modules | Legacy names live in the `legacy` block of `brand/brand.json` and surface as `LEGACY_*` constants in the generated Rust file; TypeScript needs none | One place for the names instead of two hand-written modules |
+| WP3 | Move the default recordings folder name to the brand | The default folder name stays the earlier name (`LEGACY_RECORDINGS_DIR_NAME`) until WP8 | The recorder ignores the saved folder preference today, so changing the default early would silently move where adopted installs record. WP8 fixes both together |
+| WP3 | `.meetily_decode_` prefix kept as a legacy constant | New prefix `.quire_decode_` (derived from the slug), and the deletion allowlist matches both | Leftovers from the earlier build are still cleaned |
+| WP3 | Lint scope not stated | `lint:brand` scans product source, build scripts and configuration. README, docs, CI workflows and the archived backend are not scanned. `brand/allowed-mentions.txt` entries need a reason and a stale entry fails | Upstream documents legitimately describe the upstream product |
+| WP3 | n/a | Removed a broken placeholder link (`your-org/meetily`, to a notice file that does not exist) from the Bluetooth playback warning; the macOS aggregate device name is now the neutral `system-audio-tap` | No product name where it was only decoration |
+| WP3 | n/a | `rfd` added as a direct dependency for Windows and macOS only; Linux adopts without asking | Linux is not a user platform here, and the dialog toolkit is not linked there |
