@@ -1,6 +1,6 @@
 # Shared vault format (version 1)
 
-Status: draft 2 for the Stage 2 gate, revised after an independent review. Part of the spec for `intent/private-meeting-recorder/`. Date: 2026-11-01.
+Status: draft 2, accepted with the spec on 2026-11-01 for planning Phases A to E. It stays a draft until the shared fixtures pass and the device checks in section 15 are done, and two-way sync (Phase F) waits for them. Revised after an independent review. Part of the spec for `intent/private-meeting-recorder/`. Date: 2026-11-01.
 Working app name: Quire. The identifiers `quire-vault`, `quire-format.json` and the `quire` key are fixed format identifiers, not brand values. They stay the same even if the app is renamed, because changing them would break every existing vault and the iPhone app. Only the vault root folder name (`Quire` in the examples) comes from the brand config.
 
 This file is the contract between the desktop app and the future iPhone app. Both implement it independently, so it is written as a standalone document. MUST, SHOULD and MAY carry their usual meaning.

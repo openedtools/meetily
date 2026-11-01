@@ -58,3 +58,18 @@ Model choices (user-selectable, same spirit as desktop)
 4. Does the desktop fork need changes so it reads the shared note format, and does the Windows build need the same retention setting?
 5. Final name and icon, after an App Store and trademark availability check.
 6. Local policy answer on recording work meetings with a personal device.
+
+## Addendum (2026-11-01)
+
+Added after the Stage 2 spec was accepted. The original text above is unchanged. See `spec.md` and `sync-format.md`.
+
+Proposed outcome, added
+* Desktop identity and design: the desktop app gets its own name, icon, a calm paper look (cream and terracotta, with a muted sage accent for "on this device"), and light and dark themes.
+* Desktop consent reminder and model-choice screen: a dismissible consent reminder, and one screen to choose transcription and summary models, with cloud services off until the user switches them on.
+
+Out of scope, added
+* The iPhone app itself. It is a separate project on a Mac, with its own spec. The desktop spec only defines the shared vault format it will implement.
+* A desktop server that the phone sends transcripts to. Deferred. The phone uses an on-device model or a user-supplied address for now.
+
+Open question 7, answered
+* Files or SQLite as the source of truth: SQLite stays the desktop's working store, and the vault is the shared exchange, built as one-way export first and two-way sync later (decision D1 in the spec).

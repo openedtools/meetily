@@ -1,6 +1,6 @@
 # Spec: Quire desktop and shared vault (from intent.md 2026-11-01)
 
-Status: draft 2 for the Stage 2 gate, revised after an independent review (section 10). Date: 2026-11-01. Mode: solo (accept or revise).
+Status: accepted by Ryan on 2026-11-01 (draft 2, revised after an independent review, section 10). Date: 2026-11-01. Mode: solo.
 Working name: Quire (backup: Marginalia). Companion file: `sync-format.md` (the shared vault contract).
 Use limit: personal use, unclassified information only. Never for classified or CUI discussions.
 
@@ -10,7 +10,7 @@ Use limit: personal use, unclassified information only. Never for classified or 
 * This spec covers the desktop app and the shared vault format. The iPhone app is a separate project built on a Mac and is not specified here. `sync-format.md` is the contract it will implement.
 * Not carried by this spec because they belong to the iPhone project: Swift and TestFlight distribution, background audio recording, the phone-call audio limit, FluidAudio, and the on-device battery and heat thresholds (open question 3 is split accordingly).
 * Requirements this spec added on its own judgment, not from intent.md or your brief: F-ID-4, F-RET-11, F-RET-13, F-RET-14, F-CON-6, F-MOD-6, F-MOD-7, F-MOD-8, the retrieval design in F-QA-3, F-QA-5, F-QA-7, F-HK-1 to F-HK-9, the numbers in NF-3, and the safety rules in `sync-format.md` sections 10 to 14. Each can be cut at the gate.
-* Proposed addendum to intent.md (not applied until you say yes): add "Desktop identity, design and model-choice screen" to Proposed outcome, add "iPhone implementation (separate repository and spec)" to Out of scope, and add open question 7 "Files as the source of truth or SQLite as the source of truth" (decision D1 below).
+* Addendum to intent.md (accepted, and appended to intent.md on 2026-11-01 without changing its original text): add "Desktop identity, design and model-choice screen" to Proposed outcome, add "iPhone implementation (separate repository and spec)" to Out of scope, and add open question 7 "Files as the source of truth or SQLite as the source of truth" (decision D1 below).
 
 ## 1. Current state of the fork (answers open question 1)
 
@@ -61,6 +61,7 @@ Priority: M = must for this spec, S = should (deferrable at the gate), C = could
 7. **F-UI-7 (M)** The 1,283 raw palette class uses are replaced with semantic token classes by a codemod, screen by screen. A lint rule then forbids raw palette classes and hex colours outside `tokens.css`.
 8. **F-UI-8 (M)** Reduced-motion and keyboard use work: visible focus on every control, no interaction needs a pointer, animations stop when the system asks.
 9. **F-UI-9 (S)** An original icon concept (section 3.2) is finalised as an SVG master, and all raster sizes and the `.ico` are generated from it by a script.
+10. **F-UI-10 (C)** An optional soft landscape illustration at the foot of the sidebar, in a light and a dark version. Each is an SVG or an optimised WebP of at most 60 KB, contains no text, is decorative (empty alt text), and ships inside the app so no network is needed.
 
 ### 2.3 Audio retention (F-RET)
 1. **F-RET-1 (M)** A Retention setting with six values: Off, 24 hours, 7 days, 14 days, 30 days, Keep. Plain-language description under each. The default for new installs is 7 days (decision D7).
@@ -174,6 +175,8 @@ Light theme
 | `danger` | `#9E2B1F` | errors | 6.91 paper, 6.28 surface |
 | `success` | `#3F6B3A` | confirmations | 5.77 paper, 5.24 surface |
 | `warning` | `#8A5A00` | cautions | 5.50 paper, 5.00 surface |
+| `sage` | `#6B6C54` | "on this device and private" indicators, secondary buttons | 5.00 on paper, 4.54 on surface; `on-accent` label 5.00 |
+| `sage-tint` | `#E5E8D8` | chip and badge background | `ink` on it 12.02 |
 
 Dark theme (warm charcoal, no pure black)
 
@@ -190,16 +193,23 @@ Dark theme (warm charcoal, no pure black)
 | `danger` | `#F08A7A` | 7.02 paper, 6.23 surface |
 | `success` | `#8FC285` | 8.33 paper, 7.39 surface |
 | `warning` | `#E0B05A` | 8.58 paper, 7.61 surface |
+| `sage` | `#A9B393` | 7.79 on paper, 6.91 on surface; dark label on it 7.79 |
+| `sage-tint` | `#313528` | `ink` on it 10.32, `sage` on it 5.72 |
 
 Values are starting points to adjust by eye. Any change must keep the contrast script green.
 
-Roles checked by the script (`tokens.contrast.json`): `ink` and `muted` on `paper` and `surface` are text (4.5). `accent-strong` on `paper` and `surface` is text (4.5). `on-accent` on `accent-strong` is text (4.5). `danger`, `success` and `warning` on `paper` and `surface` are text (4.5). `line-strong` on `paper` and `surface` is control border (3.0). `accent` on `paper` (3.77) is icon or large text (3.0), and `accent` on `surface` (3.43) is icon or large text only. The light `on-accent` on `accent` (3.77) is large text only and is not used for small labels. `line` is decorative and not checked. Placeholder text uses `muted`. Disabled controls are exempt from contrast but use a distinct `disabled` token. Hover and pressed states darken `accent-strong` by one step and are checked as text pairs.
+Roles checked by the script (`tokens.contrast.json`): `ink` and `muted` on `paper` and `surface` are text (4.5). `accent-strong` on `paper` and `surface` is text (4.5). `on-accent` on `accent-strong` is text (4.5). `danger`, `success` and `warning` on `paper` and `surface` are text (4.5). `line-strong` on `paper` and `surface` is control border (3.0). `accent` on `paper` (3.77) is icon or large text (3.0), and `accent` on `surface` (3.43) is icon or large text only. The light `on-accent` on `accent` (3.77) is large text only and is not used for small labels. `line` is decorative and not checked. Placeholder text uses `muted`. Disabled controls are exempt from contrast but use a distinct `disabled` token. Hover and pressed states darken `accent-strong` by one step and are checked as text pairs. `sage` on `paper` and `surface` is text (4.5), `on-accent` on `sage` is text, and `ink` on `sage-tint` is text. In the light theme `sage` text on `sage-tint` is 4.33 and is therefore not used.
 
 Type: Source Serif 4 (open licence) for the wordmark and headings, Source Sans 3 (already the app's body font) for everything else, both bundled as local font files through `next/font/local`. Scale 14, 16, 20, 28, 40 px; body line height 1.55. Spacing on an 8 px grid. Cards and panels 10 px radius, controls 8 px. No shadows; separation comes from `surface` against `paper` and from `line`.
 
 Shape of the work: tokens first, then the codemod from raw palette classes to semantic classes, one screen at a time (record, meeting, sidebar, people, settings, dialogs), each reviewed with before and after screenshots in light and dark. The shadcn variables in `globals.css` become aliases of the tokens, so existing shadcn components inherit the look without edits.
 
 Icon concept: `intent/private-meeting-recorder/assets/icon-concept.svg`. A terracotta Q on a cream tile, with a pale second ring behind it that suggests stacked folded sheets (a quire is a gathered set of folded sheets). It reads as a Q at 16 px, is a single flat shape, and is original. It becomes the SVG master in `brand/`.
+
+Aesthetic reference: `assets/ui-concept.webp`, a concept image supplied by Ryan. It is a mood and style guide only. It is not a layout, and it omits features this app has and shows some this spec does not require.
+* Taken from it: warm peach-cream surfaces; serif headings and wordmark; soft rounded cards with no heavy shadows; speaker chips as quiet warm neutrals with one peach variant; a muted sage green as a second accent that means "on this device and private" (the On Device toggle, the leaf icon); a restyled audio player with a waveform; a calm, airy summary panel; and, optionally, the soft landscape illustration at the foot of the sidebar (F-UI-10).
+* Not taken: its layout, the Share button, the folder names, the action item checkboxes, the name "AudioTranscribe", and the "Parakeet v2" label (this app uses v3).
+* Measured from the image: the Record label on its button is 2.85:1 and the On Device label on sage is 4.06:1, both below AA. Secondary text is fine (5.6:1). The tokens above fix this: buttons use `accent-strong` with a cream label (5.11), and sage uses `sage` (label 5.00).
 
 ### 3.3 Retention and the sweep
 * New module `retention` in the Rust core with a pure decision function `due(meeting, now) -> Action` and a thin runner that does file operations. The clock is injected, so tests can set "now".
@@ -259,6 +269,22 @@ Common style line to paste at the end of each prompt: "Flat vector style, limite
 5. Empty state illustration for a screen that says no meetings yet: "A quiet line illustration of an open notebook with a pencil resting on it, drawn with a single terracotta line and a few warm charcoal strokes on transparent or cream background. No people, no faces, calm and uncluttered, lots of empty space. Landscape 1200 by 800."
 6. Installer side panel (NSIS, tall): "A tall narrow panel in warm cream with a very subtle paper grain, one large pale sand circle partly off the edge, and a small terracotta folded-corner shape near the bottom. Mostly empty space. Portrait, 328 by 628 pixels, to be scaled down to 164 by 314."
 7. Release banner for the repository page: "A wide calm banner on warm cream: on the left a terracotta Q ring mark with a pale sand ring behind it, on the right generous empty space for a title. Landscape 1600 by 500."
+8. Sidebar landscape, light (optional, F-UI-10): "A soft flat landscape of layered rolling dunes in terracotta, peach and sand tones with a small pale sun and faint contour lines. The top edge fades into warm cream #F2EBDD so it blends into a sidebar. No text, no people. 660 by 440 pixels."
+9. Sidebar landscape, dark: "The same scene at dusk: warm charcoal #1F1B17 sky fading in from the top, dunes in muted terracotta and olive-grey, a small dim sun. No text. 660 by 440 pixels."
+
+Sizes to request. Please generate at these sizes or larger, as PNG:
+
+| Asset | Request | Used as |
+|---|---|---|
+| Icon ideas (prompts 1 to 3) | 1024 by 1024 | Concept only. I redraw the winner as an SVG and generate 16 to 1024 px and the `.ico` from it |
+| Dark icon (prompt 4) | 1024 by 1024 | Concept only |
+| Installer side panel (prompt 6) | 328 by 628 | Scaled to 164 by 314 and converted to BMP for the Windows installer |
+| Installer header | 300 by 114 | Scaled to 150 by 57 and converted to BMP, same cream and a small Q mark, no text |
+| Sidebar landscapes (prompts 8 and 9) | 660 by 440 | Optional F-UI-10, converted to optimised WebP |
+| Empty state (prompt 5) | 1200 by 800 | Shown at about 360 by 240 |
+| Repository banner (prompt 7) | 1600 by 500 | README and release page |
+
+Is it wise? Yes for the sidebar, empty state, banner and installer panels, which are decorative. For the app icon use the output as inspiration only, because it must be a crisp vector at 16 px. Ask for no text in any image. Keep files small and ship them inside the app, not from a web address. Note the generator's current terms of use in `brand/ASSETS.md`.
 
 ## 4. Acceptance criteria
 
@@ -273,7 +299,7 @@ All checks are run in Stage 4 and their output is pasted into the pull request. 
 | AC-ID-5 | No Pro | `rg -i "license_key\|licensing\|/get-profile"` in source, excluding `migrations/` | Zero matches, and a new migration drops the `licensing` table |
 | AC-UI-1 | Contrast | `pnpm lint:contrast` | Every pair listed in `tokens.contrast.json` meets its role's threshold (4.5 text, 3.0 large text, icon or control border), in both themes. Decorative and exempt pairs are named in the file, not skipped silently |
 | AC-UI-2 | No raw colours | `pnpm lint:colors` | Zero raw palette classes or hex colours outside `tokens.css` |
-| AC-UI-3 | Visual review | Playwright screenshots of record, meeting, sidebar, people, settings, dialogs in light and dark, at 1280 by 800 | Reviewed against the token tables; no clipped text; no component using the old grey palette |
+| AC-UI-3 | Visual review | Playwright screenshots of record, meeting, sidebar, people, settings, dialogs in light and dark, at 1280 by 800 | Reviewed against the token tables and the aesthetic reference (`assets/ui-concept.webp`, mood only, not a layout); no clipped text; no component using the old grey palette |
 | AC-UI-4 | Keyboard | Playwright script tabbing through each screen | Every interactive element reachable and shows a visible focus ring; every target at least 24 by 24 px |
 | AC-UI-5 | Fonts offline | Build with the network disabled | Build succeeds; fonts render from local files |
 | AC-UI-6 | Icon | Render the SVG at 16, 32, 64, 256 px | Still recognisable as a Q at 16 px; `.ico` contains 16, 32, 48, 256 |
@@ -289,7 +315,7 @@ All checks are run in Stage 4 and their output is pasted into the pull request. 
 | AC-TO-2 | Disabled features | UI test | Detect speakers, Enhance and playback show disabled with a reason; manual labels work |
 | AC-QA-1 | Context builder | Unit tests | Never exceeds the token budget; includes the newest lines; BM25 picks the line containing the asked keyword from a 2-hour transcript; output deterministic |
 | AC-QA-2 | Citations | Unit tests | A citation outside every supplied segment is dropped; a valid one links to its line |
-| AC-QA-3 | Performance | Benchmark on the target PC, 30, 60 and 120 minute transcripts, each built-in model, Parakeet running | Thresholds recorded in plan.md after the first run, then enforced: no dropped audio chunks, transcription backlog under 5 s, and first token within the agreed limit; the two context budgets in F-QA-3 are tuned here |
+| AC-QA-3 | Performance | Benchmark on your PC (Legion 7 16IAX7, i7-12800HX, 16 GB, RTX 3070 Ti) in two profiles, portable CPU and CUDA, plugged in and on battery, with 30, 60 and 120 minute transcripts, each built-in model, Parakeet running | Thresholds recorded in plan.md after the first run, then enforced: no dropped audio chunks, transcription backlog under 5 s, and first token within the agreed limit; the two context budgets in F-QA-3 are tuned here |
 | AC-QA-4 | Local only | Run with the network blocked | A question is answered; zero outbound connection attempts |
 | AC-QA-5 | No cloud by default | Test: fresh settings, cloud switch off | No cloud provider selectable; `cloud_allowed()` is false; every cloud code path returns an error before any request |
 | AC-CON-1 | Reminder | UI test | Appears on start, does not delay start (under 100 ms), "Never show again" persists across restart and can be reset in Settings |
@@ -312,6 +338,7 @@ All checks are run in Stage 4 and their output is pasted into the pull request. 
 | AC-ID-6 | Icons replaced | Compare every file under `src-tauri/icons/` and the installer images with the upstream base commit (`git show`) | None is byte-identical to the upstream file; About and the window show the new icon |
 | AC-UI-7 | Theme | Playwright with emulated light and dark colour schemes, then the Settings override | The app follows the emulated scheme; a forced light or dark persists after restart; no `theme` is forced in `tauri.conf.json` |
 | AC-UI-8 | Calm and few controls | Screenshot review of record, meeting and settings at 1280 by 800 in both themes, recorded in the PR | Each main screen has one primary action; extra controls above the fold are listed and justified; no shadows other than focus rings |
+| AC-UI-9 | Sidebar illustration | File check and a screenshot | Each version is at most 60 KB, has no text, has empty alt text, loads with the network blocked, and does not reduce contrast of any text above it below its role's threshold |
 | AC-RET-9 | Finalizer race | Test with an injected clock: an Off meeting, with the sweep firing between save and finalization | Audio is not deleted before `finalized_at` is set, and is deleted at finalization when the save succeeded |
 | AC-RET-10 | Audio-only deletion and meeting delete | Tests: expired audio deleted while `transcripts.json` and `metadata.json` remain; meeting delete with a locked audio file | Per-file results returned; transcript files untouched; the meeting stays listed as deleting and the retry succeeds when the lock clears; no orphan folder |
 | AC-RET-11 | Recovery, import, orphans | Tests: recover a crashed recording, import an audio file, create a folder with no row | Recovered and imported meetings get a deadline from the current setting; the orphan folder is listed as unmanaged and never deleted |
@@ -358,6 +385,7 @@ Every requirement maps to at least one criterion. `scripts/check-traceability.mj
 | F-UI-5, F-UI-6 | AC-UI-3, AC-UI-8 |
 | F-UI-8 | AC-UI-4 |
 | F-UI-9 | AC-UI-6 |
+| F-UI-10 | AC-UI-9 |
 | F-RET-1 | AC-RET-1, AC-RET-13 |
 | F-RET-2 | AC-RET-7, AC-RET-11 |
 | F-RET-3 | AC-RET-4, AC-RET-9, AC-RET-15 |
@@ -468,13 +496,13 @@ Not applied, because none exist in this session: any organization security, bran
 | 21 | Voiceprints are biometric-like data about other people. Some state laws name voiceprints as biometric identifiers (for example Illinois and Texas), mostly for commercial use. Personal use is lower risk. | Privacy law, not legal advice | Ryan | Voiceprints stay local, never sync, and are removed with the meeting or person. Revisit before distributing the app beyond personal use. A "remember voices" switch already exists in the detection dialog. |
 | 22 | The em dash rule. The repository has 119 in source (code comments and a few user-visible strings) and none in any other tracked text file. | intent.md | Ryan | Clean all 119, lint every tracked text file, no exemptions needed today (F-HK-5). Settled, no decision needed. |
 | 23 | iCloud for Windows behaviour is only partly documented: placeholder attribute, conflict copies, dot-names, directory rename handling. | Apple docs gaps | Ryan (needs devices) | Phase E (export only) ships first. Phase F waits for AC-SYNC-7. |
-| 24 | Running transcription and a language model at once may overheat or slow the PC. Thresholds are an open question. | intent.md open question 3 | Ryan | Benchmark first (AC-QA-3). I need your PC's CPU, GPU and RAM (D9). |
+| 24 | Running transcription and a language model at once may overheat or slow the PC. Thresholds are an open question. | intent.md open question 3 | Ryan | Benchmark first (AC-QA-3) on your PC (D9, answered): i7-12800HX, 16 GB RAM, RTX 3070 Ti. It is a laptop, so the benchmark runs plugged in and on battery and records clock and fan behaviour, and runs with your usual apps open. |
 | 25 | Someone could say "ignore your instructions" during a meeting and have it reach the model. | Security | Ryan | The model has no tools or actions; answers are labelled and sanitized (F-QA-7). Residual risk is a wrong answer. |
 | 26 | Logs may carry transcript text at debug level. | Privacy | Ryan | Audit and test (NF-6, AC-HK-4). |
 | 27 | Cloud model providers and custom endpoints can send transcript text off the computer. | intent.md | Ryan | Master cloud switch, labels, confirmation, non-local host warning (F-MOD-5, F-MOD-7). |
 | 28 | Process: the repository CLAUDE.md is upstream's, 409 lines, and describes a legacy backend. | SDLC skill | Ryan | Replaced in Phase A (F-HK-6). Not written yet because Stage 3 has not started. |
 | 29 | Model downloads for Whisper and Parakeet are not hash-pinned like the speaker model and ffmpeg. | Security review | Ryan | Manifest with SHA-256 (F-MOD-8, should). |
-| 30 | The Windows installer build is CPU-only, so prompt processing on a large transcript may be slow beside Parakeet. | Performance, intent open question 3 | Ryan | Small starting context budgets, tuned by benchmark (F-QA-3, AC-QA-3). GPU builds are a separate decision. |
+| 30 | The Windows installer build is CPU-only, so prompt processing on a large transcript may be slow beside Parakeet. | Performance, intent open question 3 | Ryan | Small starting context budgets, tuned by benchmark (F-QA-3, AC-QA-3). For your own PC a CUDA build is possible with the RTX 3070 Ti (confirm its video memory in Task Manager; the laptop part normally has 8 GB). It is a separate build profile from the shared portable installer, scheduled in Phase D. |
 | 31 | Migrations are one way. A newer build that migrates the database cannot be undone by installing an older build. | Reliability | Ryan | Dated database backup before migration (F-HK-9). |
 | 32 | Antivirus scanners, the audio player and sync clients can lock audio files on Windows, which blocks deletion. | Windows behaviour | Ryan | Retry-based deletion, a "deletion pending" status, and never a false "deleted" (F-RET-6). |
 | 33 | Existing installs may already use Claude, OpenAI or other cloud providers, which conflicts with "cloud off by default". | intent.md | Ryan | The switch starts on, with a notice, only for installs that already have a cloud provider and key (F-MOD-5). Fresh installs start off. |
@@ -494,10 +522,12 @@ Decisions needed at the gate
 * **D8** Desktop API transcription: verify and keep behind the cloud switch, or hide it for now (recommended: hide unless it already works).
 * **D9** Your Windows PC's CPU, GPU and RAM, so the Q&A benchmark thresholds and the default model can be set.
 
+Recorded on 2026-11-01: Ryan answered "Accept" with no changes, so D1 to D4 and D6 to D8 stand as recommended, D5 is settled, and D9 is answered in section 8 (hardware). The UI concept image was supplied as an aesthetic reference only (section 3.2).
+
 ## 8. Open questions from intent
 
 1. **How the fork stores notes and folders.** Answered in section 1. Reading and writing the shared format is designed in `sync-format.md` and section 3.7. The first-pass decision is D1.
-2. **Which on-device LLM.** Desktop: the four built-in models already in the app (Qwen 3.5 2B at 1.2 GB, Qwen 3.5 4B at 2.6 GB, Gemma 3 4B at 2.4 GB, Gemma 3 1B at 1.0 GB, 32k context) plus Ollama. Proposed default: Qwen 3.5 2B, with 4B suggested when the PC has 16 GB or more (D9). Carried to the iOS spec: candidates are Apple's on-device Foundation Models framework (no download, availability to be verified on the target iPhone and OS) versus a small downloaded model. Decide after a test on the device.
+2. **Which on-device LLM.** Desktop: the four built-in models already in the app (Qwen 3.5 2B at 1.2 GB, Qwen 3.5 4B at 2.6 GB, Gemma 3 4B at 2.4 GB, Gemma 3 1B at 1.0 GB, 32k context) plus Ollama. Answer from your hardware (D9): Lenovo Legion 7 16IAX7, Core i7-12800HX (16 cores, 24 threads), 16 GB RAM, NVIDIA RTX 3070 Ti laptop GPU, Windows 11 Home. Starting default is Qwen 3.5 2B for everyone, and 4B is offered when installed RAM is 16 GB or more. RAM is the likelier limit than CPU: Windows showed 2.66 GB free when you captured the system screen. The Q&A benchmark (AC-QA-3) decides whether 4B becomes your default. Carried to the iOS spec: candidates are Apple's on-device Foundation Models framework (no download, availability to be verified on the target iPhone and OS) versus a small downloaded model. Decide after a test on the device.
 3. **Battery and heat.** Carried. Desktop: measured in AC-QA-3. Proposed starting thresholds for the iOS spec, to confirm: a 60-minute live transcription uses no more than 25 percent battery with the screen off, and the system thermal state never reaches serious.
 4. **Desktop changes for the shared format and retention.** Answered in section 1 (yes), designed in sections 2.3, 2.8 and 3.
 5. **Final name and icon.** Carried. Working name Quire, backup Marginalia. Findings in concern 12. An icon concept exists (section 3.2) and prompts for exploring more are in section 3.9.
@@ -507,10 +537,10 @@ Decisions needed at the gate
 
 Each phase is independently shippable, ends in its own tests and an independent review, and is a separate gate.
 
-* **A. Identity, tokens, housekeeping.** Brand config and generator, data adoption, tokens, fonts, codemod and lint, icon, About, removal of Pro, telemetry and dead files, updater off, em dash lint, database backup before migration, the recordings folder setting, one-page CLAUDE.md with verify block and a hook that locks tests during bug-fix tasks. Largest phase because of the re-skin.
+* **A. Identity, tokens, housekeeping.** Brand config and generator, data adoption, tokens, fonts, codemod and lint, icon, About, removal of Pro, telemetry and dead files, updater off, em dash lint, database backup before migration, the recordings folder setting, the sage token and the aesthetic reference, one-page CLAUDE.md with verify block and a hook that locks tests during bug-fix tasks. Largest phase because of the re-skin.
 * **B. Privacy core.** Retention setting, sweep and its guards, detect-on-save, per-recording transcript-only with a finalization path, the audio-only deletion function and two-phase meeting delete, consent reminder, first-run notice. Failing tests first for every deletion rule.
 * **C. Models.** Models screen, cloud switch, Credential Manager migration, model manifest.
-* **D. Live Q&A.** Benchmark, context builder, Ask box, citations.
+* **D. Live Q&A.** Benchmark on your PC in two profiles (portable CPU and a CUDA build for the RTX 3070 Ti), context builder, Ask box, citations.
 * **E. Vault export.** Format library with fixtures, one-way export, Sync screen, disclosure.
 * **F. Two-way sync.** Import, conflicts, deletion propagation, real-device verification first.
 
