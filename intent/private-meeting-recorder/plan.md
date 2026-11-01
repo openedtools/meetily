@@ -227,3 +227,8 @@ AC-ID-1 to AC-ID-6, AC-UI-1 to AC-UI-8 (AC-UI-9 only if the illustration is supp
 | WP2, WP3 | Not in the plan | A database failure at startup shows a window with the reason instead of closing silently; the backup rename retries | Review finding: a release build has no console |
 | WP1 | Not in the plan | The test-lock hook normalises line endings and ignores case in paths; `brand:check` ignores line endings | Review findings for Windows checkouts |
 | WP3 | n/a | `rfd` added as a direct dependency for Windows and macOS only; Linux adopts without asking | Linux is not a user platform here, and the dialog toolkit is not linked there |
+| A1 (Windows) | Adoption reads the old database read-only | When the old app is closed, the old database is opened as immutable | Windows test finding: a read-only connection to a write-ahead-log database created `-wal` and `-shm` files in the old folder and could not remove them. Test added |
+| WP4.3 | Remove the `APP_SERVER_URL` CSP entry and `serverAddress` | Also removed `localhost:8178` (old whisper server) from the CSP and the sidebar's `transcriptServerAddress` | Same kind of leftover, set once and never used |
+| WP4.4 | Delete the analytics test file in stage (c) | Deleted in stage (a), with the stub | The stub made those tests fail; moving it keeps every commit green |
+| WP4.4 | Dead-file list in amendment 7 | Also deleted `lib_old_complex.rs`, an old copy of `lib.rs` that is never compiled | Missed in the list; it was the last place naming the PostHog host |
+| WP4.6 | Edit the 3 error strings by hand | The hot-swap errors are now full sentences ("the microphone switch was cancelled") | They can reach the person through the recording error path |
