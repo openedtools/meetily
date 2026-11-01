@@ -293,6 +293,22 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn the_unused_licensing_and_meeting_notes_tables_are_dropped_on_upgrade() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("meeting_minutes.sqlite");
+        database_one_migration_behind(&db).await;
+
+        let manager = DatabaseManager::new(db.to_str().unwrap(), "none.db").await.unwrap();
+        let tables: Vec<String> = sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type = 'table'")
+            .fetch_all(manager.pool())
+            .await
+            .unwrap();
+        assert!(!tables.iter().any(|t| t == "licensing" || t == "meeting_notes"), "{tables:?}");
+        let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM meetings").fetch_one(manager.pool()).await.unwrap();
+        assert_eq!(n, 1, "meetings are kept");
+    }
+
+    #[tokio::test]
     async fn a_brand_new_database_is_created_without_any_backup() {
         let dir = tempfile::tempdir().unwrap();
         let db = dir.path().join("meeting_minutes.sqlite");
