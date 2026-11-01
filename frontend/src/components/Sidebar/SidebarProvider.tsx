@@ -54,10 +54,6 @@ interface SidebarContextType {
   searchTranscripts: (query: string) => Promise<void>;
   searchResults: TranscriptSearchResult[];
   isSearching: boolean;
-  setServerAddress: (address: string) => void;
-  serverAddress: string;
-  transcriptServerAddress: string;
-  setTranscriptServerAddress: (address: string) => void;
   // Summary polling management
   startSummaryPolling: (
     meetingId: string,
@@ -96,8 +92,6 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [isMeetingActive, setIsMeetingActive] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [serverAddress, setServerAddress] = useState('');
-  const [transcriptServerAddress, setTranscriptServerAddress] = useState('');
   const summaryPollsRef = React.useRef(new Map<string, SummaryPoll>());
 
   // Use recording state from RecordingStateContext (single source of truth)
@@ -108,42 +102,32 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 
   // Extract fetchMeetings as a reusable function
   const fetchMeetings = React.useCallback(async () => {
-    if (serverAddress) {
+    try {
+      const meetings = await invoke('api_get_meetings') as Array<{ id: string, title: string, folder_id?: string | null }>;
+      const transformedMeetings = meetings.map((meeting: any) => ({
+        id: meeting.id,
+        title: meeting.title,
+        folder_id: meeting.folder_id ?? null
+      }));
+      setMeetings(transformedMeetings);
+      // Folders are optional: a failure here must not hide the meetings themselves
       try {
-        const meetings = await invoke('api_get_meetings') as Array<{ id: string, title: string, folder_id?: string | null }>;
-        const transformedMeetings = meetings.map((meeting: any) => ({
-          id: meeting.id,
-          title: meeting.title,
-          folder_id: meeting.folder_id ?? null
-        }));
-        setMeetings(transformedMeetings);
-        // Folders are optional: a failure here must not hide the meetings themselves
-        try {
-          const loadedFolders = await invoke('api_list_folders') as FolderSummary[] | null;
-          setFolders(Array.isArray(loadedFolders) ? loadedFolders : []);
-        } catch (folderError) {
-          console.error('Error fetching folders:', folderError);
-        }
-        Analytics.trackBackendConnection(true);
-      } catch (error) {
-        console.error('Error fetching meetings:', error);
-        setMeetings([]);
-        Analytics.trackBackendConnection(false, error instanceof Error ? error.message : 'Unknown error');
+        const loadedFolders = await invoke('api_list_folders') as FolderSummary[] | null;
+        setFolders(Array.isArray(loadedFolders) ? loadedFolders : []);
+      } catch (folderError) {
+        console.error('Error fetching folders:', folderError);
       }
+      Analytics.trackBackendConnection(true);
+    } catch (error) {
+      console.error('Error fetching meetings:', error);
+      setMeetings([]);
+      Analytics.trackBackendConnection(false, error instanceof Error ? error.message : 'Unknown error');
     }
-  }, [serverAddress]);
+  }, []);
 
   useEffect(() => {
     fetchMeetings();
-  }, [serverAddress, fetchMeetings]);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      setServerAddress('http://localhost:5167');
-      setTranscriptServerAddress('http://127.0.0.1:8178/stream');
-    };
-    fetchSettings();
-  }, []);
+  }, [fetchMeetings]);
 
   const sortFolders = (list: FolderSummary[]) =>
     [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
@@ -411,10 +395,6 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       searchTranscripts,
       searchResults,
       isSearching,
-      setServerAddress,
-      serverAddress,
-      transcriptServerAddress,
-      setTranscriptServerAddress,
       startSummaryPolling,
       stopSummaryPolling,
       refetchMeetings: fetchMeetings,
