@@ -20,4 +20,3 @@ frontend/src-tauri/src/parakeet_engine/parakeet_engine.rs | model download addre
 frontend/src/components/About.tsx | About screen is rewritten in WP7 (upstream contact link)
 frontend/src/lib/analytics.ts | telemetry client, removed in WP4
 frontend/src-tauri/src/lib_old_complex.rs | dead file, deleted in WP4
-frontend/src-tauri/tauri.conf.json | updater endpoint, removed in WP4
