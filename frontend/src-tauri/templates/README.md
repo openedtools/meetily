@@ -45,11 +45,12 @@ Each template JSON file follows this schema:
 
 ## Custom Templates
 
-Users can add custom templates to the application data directory:
+Users can add custom templates to the `templates` folder inside the app's data directory
+(the platform data folder plus the bundle identifier from `brand/brand.json`):
 
-- **macOS**: `~/Library/Application Support/Meetily/templates/`
-- **Windows**: `%APPDATA%\Meetily\templates\`
-- **Linux**: `~/.config/Meetily/templates/`
+- **Windows**: `%APPDATA%\<bundle id>\templates\`
+- **macOS**: `~/Library/Application Support/<bundle id>/templates/`
+- **Linux**: `~/.local/share/<bundle id>/templates/`
 
 Custom templates override built-in templates with the same filename.
 

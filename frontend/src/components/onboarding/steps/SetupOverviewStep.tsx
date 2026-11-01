@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand.generated';
 import React, { useEffect, useState } from 'react';
 import { Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,7 +47,7 @@ export function SetupOverviewStep() {
   return (
     <OnboardingContainer
       title="Setup Overview"
-      description="Meetily requires that you download the Transcription & Summarization AI models for the software to work."
+      description={`${BRAND.name} requires that you download the Transcription & Summarization AI models for the software to work.`}
       step={2}
       totalSteps={isMac ? 4 : 3}
     >

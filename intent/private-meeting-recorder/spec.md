@@ -293,7 +293,7 @@ All checks are run in Stage 4 and their output is pasted into the pull request. 
 | ID | Check | Method | Pass condition |
 |---|---|---|---|
 | AC-ID-1 | Rename is one line | Change `name` in `brand.json` to `Marginalia`, run `pnpm brand:apply`, run `pnpm tauri build` | Window title, installer file name, productName and About text show the new name; `git diff --stat` touches only `brand.json` and the generated files |
-| AC-ID-2 | No stray old name | `pnpm lint:brand` | Zero matches for `meetily` (case-insensitive) outside `brand/allowed-mentions.txt` (which lists `migrations/`, `Cargo.toml`, `package.json` and `legacy.*`) |
+| AC-ID-2 | No stray old name | `pnpm lint:brand` | Zero matches for `meetily` (case-insensitive) in product source, build scripts and configuration outside `brand/allowed-mentions.txt`. Each exception there has a written reason and the lint fails on a stale one. Documentation, CI workflows and the archived backend are not scanned |
 | AC-ID-3 | Data adoption | Test with a seeded old data folder | New folder holds an identical database; old folder byte-identical; an interrupted copy leaves no half database; legacy temp prefix and recovery store still honoured |
 | AC-ID-4 | Credit and licence | Inspect About and `LICENSE.md` | About shows "Based on Meetily by Zackriya Solutions" and the MIT text; `LICENSE.md` still contains the upstream notice |
 | AC-ID-5 | No Pro | `rg -i "license_key\|licensing\|/get-profile"` in source, excluding `migrations/` | Zero matches, and a new migration drops the `licensing` table |

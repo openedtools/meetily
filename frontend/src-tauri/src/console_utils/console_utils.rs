@@ -49,9 +49,9 @@ pub fn show_console() -> Result<String, String> {
             .arg(r#"
                 tell application "Terminal"
                     activate
-                    do script "log stream --process meetily --level info --style compact"
+                    do script "log stream --process __SLUG__ --level info --style compact"
                 end tell
-            "#)
+            "#.replace("__SLUG__", crate::brand_generated::SLUG))
             .spawn()
         {
             Ok(_) => Ok("Console opened in Terminal".to_string()),
@@ -87,12 +87,12 @@ pub fn hide_console() -> Result<String, String> {
                 tell application "Terminal"
                     set windowList to windows
                     repeat with aWindow in windowList
-                        if contents of selected tab of aWindow contains "log stream --process meetily" then
+                        if contents of selected tab of aWindow contains "log stream --process __SLUG__" then
                             close aWindow
                         end if
                     end repeat
                 end tell
-            "#)
+            "#.replace("__SLUG__", crate::brand_generated::SLUG))
             .spawn()
         {
             Ok(_) => Ok("Console closed".to_string()),
@@ -129,13 +129,13 @@ pub fn toggle_console() -> Result<String, String> {
                 tell application "Terminal"
                     set windowList to windows
                     repeat with aWindow in windowList
-                        if contents of selected tab of aWindow contains "log stream --process meetily" then
+                        if contents of selected tab of aWindow contains "log stream --process __SLUG__" then
                             return "found"
                         end if
                     end repeat
                     return "not found"
                 end tell
-            "#)
+            "#.replace("__SLUG__", crate::brand_generated::SLUG))
             .output();
             
         match check_result {

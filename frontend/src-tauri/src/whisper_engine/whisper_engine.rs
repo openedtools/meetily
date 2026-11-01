@@ -148,10 +148,8 @@ impl WhisperEngine {
             } else {
                 // Production mode fallback (shouldn't reach here, caller should provide path)
                 log::warn!("WhisperEngine: No models directory provided, using fallback path");
-                dirs::data_dir()
-                    .or_else(|| dirs::home_dir())
+                crate::paths::app_data_dir()
                     .ok_or_else(|| anyhow!("Could not find system data directory"))?
-                    .join("Meetily")
                     .join("models")
             }
         };
@@ -1141,7 +1139,7 @@ impl WhisperEngine {
         }
 
         let client = Client::builder()
-            .user_agent(concat!("Meetily/", env!("CARGO_PKG_VERSION")))
+            .user_agent(format!("{}/{}", crate::brand_generated::NAME, env!("CARGO_PKG_VERSION")))
             .build()
             .map_err(|e| anyhow!("Failed to create download client: {}", e))?;
         let response = tokio::select! {
@@ -1654,7 +1652,8 @@ mod tests {
 
         assert!(error.to_string().contains("too small"));
         assert!(request.to_ascii_lowercase().contains(&format!(
-            "user-agent: meetily/{}",
+            "user-agent: {}/{}",
+            crate::brand_generated::NAME.to_lowercase(),
             env!("CARGO_PKG_VERSION")
         )));
         assert!(!engine.active_downloads.lock().await.contains_key("tiny"));

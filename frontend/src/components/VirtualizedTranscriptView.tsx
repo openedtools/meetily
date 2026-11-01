@@ -1,5 +1,6 @@
 'use client';
 
+import { BRAND } from '@/lib/brand.generated';
 import { useCallback, useRef, useReducer, startTransition, useEffect, useState, memo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
@@ -269,7 +270,7 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                         </>
                     ) : (
                         <>
-                            <p className="text-lg font-semibold">Welcome to meetily!</p>
+                            <p className="text-lg font-semibold">Welcome to {BRAND.name}!</p>
                             <p className="text-xs mt-1">Start recording to see live transcription</p>
                         </>
                     )}

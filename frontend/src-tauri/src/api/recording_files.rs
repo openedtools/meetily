@@ -16,7 +16,9 @@ const APP_FILES: &[&str] = &[
 const MARKER_FILES: &[&str] = &["metadata.json", "transcripts.json"];
 /// Hidden working files and folders the app leaves while recording or importing.
 const CHECKPOINT_DIR: &str = ".checkpoints";
-const TEMP_PREFIX: &str = ".meetily_decode_";
+/// Prefixes of the temporary files the app leaves next to a recording. The earlier product used a
+/// different one, and its leftovers are still cleaned up.
+const TEMP_PREFIXES: [&str; 2] = [crate::brand_generated::TEMP_PREFIX, crate::brand_generated::LEGACY_TEMP_PREFIX];
 
 /// Delete the app's recording files in `folder`, then the folder itself if that leaves it empty.
 /// Returns how many files and folders were removed; `Ok(0)` if there was nothing to remove or the
@@ -51,7 +53,7 @@ pub(crate) fn delete_recording_files(folder: &Path) -> std::io::Result<usize> {
     }
     for entry in std::fs::read_dir(folder)?.flatten() {
         let name = entry.file_name();
-        if name.to_string_lossy().starts_with(TEMP_PREFIX) && entry.path().is_file() {
+        if TEMP_PREFIXES.iter().any(|p| name.to_string_lossy().starts_with(p)) && entry.path().is_file() {
             std::fs::remove_file(entry.path())?;
             removed += 1;
         }
@@ -77,7 +79,8 @@ mod tests {
         let folder = root.path().join("Meeting_2026");
         std::fs::create_dir_all(folder.join(".checkpoints")).unwrap();
         touch(&folder.join(".checkpoints"), "chunk_0.mp4");
-        for name in ["audio.mp4", "transcripts.json", "metadata.json", ".meetily_decode_abc.wav"] {
+        let temp_name = format!("{}abc.wav", crate::brand_generated::TEMP_PREFIX);
+        for name in ["audio.mp4", "transcripts.json", "metadata.json", temp_name.as_str()] {
             touch(&folder, name);
         }
         let removed = delete_recording_files(&folder).unwrap();

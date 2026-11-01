@@ -92,6 +92,7 @@ ${c('WINDOW_TITLE', b.windowTitle)}
 ${c('TAGLINE', b.tagline)}
 ${c('VAULT_DIR_NAME', b.vaultDirName)}
 ${c('UPSTREAM_CREDIT', b.upstreamCredit)}
+${c('TEMP_PREFIX', `.${b.slug}_decode_`)}
 
 // Names from the earlier product that the app must still recognise (data adoption, cleanup).
 ${c('LEGACY_NAME', b.legacy.name)}

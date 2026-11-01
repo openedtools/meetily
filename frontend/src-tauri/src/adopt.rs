@@ -535,10 +535,10 @@ mod tests {
     async fn templates_and_notification_settings_from_their_old_homes_are_brought_in() {
         let (root, old, new) = dirs();
         let _pool = old_install(&old).await;
-        let templates = root.path().join("Meetily/templates");
+        let templates = root.path().join("old-templates-home/templates");
         fs::create_dir_all(&templates).unwrap();
         fs::write(templates.join("standup.json"), r#"{"name":"standup"}"#).unwrap();
-        let notifications = root.path().join("meetily-config/notifications.json");
+        let notifications = root.path().join("old-config-home/notifications.json");
         fs::create_dir_all(notifications.parent().unwrap()).unwrap();
         fs::write(&notifications, r#"{"enabled":false}"#).unwrap();
 

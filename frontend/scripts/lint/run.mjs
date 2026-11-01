@@ -10,6 +10,7 @@ const FRONTEND = path.resolve(HERE, '..', '..');
 const CHECKS = [
   { name: 'dashes', script: 'dashes.mjs' },
   { name: 'brand drift', script: '../brand-apply.mjs', args: ['--check'] },
+  { name: 'brand mentions', script: 'brand.mjs' },
 ];
 
 let failed = 0;

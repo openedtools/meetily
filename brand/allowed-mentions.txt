@@ -1,0 +1,25 @@
+# Places where the earlier product's name may still appear in product source, build scripts
+# and configuration. One entry per line: a file or glob, then "|", then the reason.
+# `pnpm lint` fails on any other mention, and on an entry that no longer matches one.
+# Documentation, CI workflows and the archived backend are not scanned.
+
+# Names that cannot or should not change
+frontend/src-tauri/Cargo.toml | crate name; renaming it would break build scripts and log filters
+frontend/package.json | package name
+
+# Generated from brand/brand.json
+frontend/src-tauri/src/brand_generated.rs | generated constants that name the earlier product
+frontend/src/lib/brand.generated.ts | generated credit line ("Based on Meetily")
+
+# Reading data or paths that belong to the upstream product
+frontend/src/components/DatabaseImport/** | imports databases from earlier installs of the upstream product
+frontend/src/contexts/OnboardingContext.tsx | looks for the upstream product's Homebrew database path
+frontend/src-tauri/src/parakeet_engine/parakeet_engine.rs | model download address on an upstream-hosted server (reviewed in Phase C)
+
+# Temporary: removed by a later work package in the Phase A plan
+frontend/src/components/About.tsx | About screen is rewritten in WP7 (upstream contact link)
+frontend/src/app/metadata.ts | dead file, deleted in WP4
+frontend/src/app/metadata.tsx | dead file, deleted in WP4
+frontend/src/lib/analytics.ts | telemetry client, removed in WP4
+frontend/src-tauri/src/lib_old_complex.rs | dead file, deleted in WP4
+frontend/src-tauri/tauri.conf.json | updater endpoint, removed in WP4

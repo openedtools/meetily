@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand.generated';
 import React, { useEffect, useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Mic, Volume2 } from 'lucide-react';
@@ -114,7 +115,7 @@ export function PermissionsStep() {
   return (
     <OnboardingContainer
       title="Grant Permissions"
-      description="Meetily needs access to your microphone and system audio to record meetings"
+      description={`${BRAND.name} needs access to your microphone and system audio to record meetings`}
       step={4}
       hideProgress={true}
       showNavigation={allPermissionsGranted}

@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand.generated';
 import React from 'react';
 import { AlertTriangle, Mic, Speaker, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -98,7 +99,7 @@ export function PermissionWarning({
             {!hasMicrophone && (
               <>
                 <p className="mb-3">
-                  Meetily needs access to your microphone to record meetings. No microphone devices were detected.
+                  {BRAND.name} needs access to your microphone to record meetings. No microphone devices were detected.
                 </p>
                 <div className="space-y-2 text-sm mb-4">
                   <p className="font-medium">Please check:</p>
@@ -124,7 +125,7 @@ export function PermissionWarning({
                     <p className="font-medium">To enable system audio on macOS:</p>
                     <ul className="list-disc list-inside ml-2 space-y-1">
                       <li>Install a virtual audio device (e.g., BlackHole 2ch)</li>
-                      <li>Grant Screen Recording permission to Meetily</li>
+                      <li>Grant Screen Recording permission to {BRAND.name}</li>
                       <li>Configure your audio routing in Audio MIDI Setup</li>
                     </ul>
                   </div>

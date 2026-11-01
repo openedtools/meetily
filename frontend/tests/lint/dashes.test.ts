@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 // @ts-ignore plain ES module without types
 import { countEmDashes, evaluateDashes, isProbablyText } from '../../scripts/lint/dashes.mjs';
 
-const EM = '—';
-const EN = '–';
+const EM = String.fromCharCode(0x2014);
+const EN = String.fromCharCode(0x2013);
 
 describe('countEmDashes', () => {
   test('counts every em dash and ignores en dashes and hyphens', () => {

@@ -7,6 +7,7 @@ pub const WINDOW_TITLE: &str = "Quire";
 pub const TAGLINE: &str = "Meeting notes that stay on your computer.";
 pub const VAULT_DIR_NAME: &str = "Quire";
 pub const UPSTREAM_CREDIT: &str = "Based on Meetily by Zackriya Solutions (MIT licence)";
+pub const TEMP_PREFIX: &str = ".quire_decode_";
 
 // Names from the earlier product that the app must still recognise (data adoption, cleanup).
 pub const LEGACY_NAME: &str = "Meetily";

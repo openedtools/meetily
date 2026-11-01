@@ -93,6 +93,7 @@ describe('renderers', () => {
     expect(rs).toContain(`pub const BUNDLE_ID: &str = "${realBrand.bundleId}";`);
     expect(rs).toContain(`pub const LEGACY_IDENTIFIER: &str = "${realBrand.legacy.identifier}";`);
     expect(rs).toContain(`pub const LEGACY_TEMP_PREFIX: &str = "${realBrand.legacy.tempPrefix}";`);
+    expect(rs).toContain(`pub const TEMP_PREFIX: &str = ".${realBrand.slug}_decode_";`);
   });
 });
 

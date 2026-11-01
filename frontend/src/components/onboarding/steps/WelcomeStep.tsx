@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand.generated';
 import React from 'react';
 import { Lock, Sparkles, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ export function WelcomeStep() {
 
   return (
     <OnboardingContainer
-      title="Welcome to Meetily"
+      title={`Welcome to ${BRAND.name}`}
       description="Record. Transcribe. Summarize. All on your device."
       step={1}
       hideProgress={true}

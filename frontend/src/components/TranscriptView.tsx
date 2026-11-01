@@ -1,5 +1,6 @@
 'use client';
 
+import { BRAND } from '@/lib/brand.generated';
 import { Transcript } from '@/types';
 import { useEffect, useRef, useState } from 'react';
 import { ConfidenceIndicator } from './ConfidenceIndicator';
@@ -370,7 +371,7 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({ transcripts, isR
             </>
           ) : (
             <>
-              <p className="text-lg font-semibold">Welcome to meetily!</p>
+              <p className="text-lg font-semibold">Welcome to {BRAND.name}!</p>
               <p className="text-xs mt-1">Start recording to see live transcription</p>
             </>
           )}

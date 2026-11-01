@@ -107,12 +107,15 @@ impl SidecarManager {
     /// Resolve the path to llama-helper binary
     fn resolve_helper_binary() -> Result<PathBuf> {
         // 1. Check environment variable (dev mode or manual override)
-        if let Ok(env_path) = std::env::var("MEETILY_LLAMA_HELPER") {
-            if !env_path.is_empty() {
-                let path = PathBuf::from(env_path);
-                if path.exists() {
-                    log::info!("Using llama-helper from MEETILY_LLAMA_HELPER: {}", path.display());
-                    return Ok(path);
+        for prefix in [crate::brand_generated::SLUG, crate::brand_generated::LEGACY_NAME] {
+            let var = format!("{}_LLAMA_HELPER", prefix.to_uppercase());
+            if let Ok(env_path) = std::env::var(&var) {
+                if !env_path.is_empty() {
+                    let path = PathBuf::from(env_path);
+                    if path.exists() {
+                        log::info!("Using llama-helper from {}: {}", var, path.display());
+                        return Ok(path);
+                    }
                 }
             }
         }
@@ -255,7 +258,8 @@ impl SidecarManager {
         }
 
         Err(anyhow!(
-            "llama-helper binary not found. Build with 'cd llama-helper && cargo build --release' or set MEETILY_LLAMA_HELPER env var."
+            "llama-helper binary not found. Build with 'cd llama-helper && cargo build --release' or set the {}_LLAMA_HELPER environment variable.",
+            crate::brand_generated::SLUG.to_uppercase()
         ))
     }
 

@@ -4,6 +4,9 @@
  * to enable recovery after app crashes or unexpected closures.
  */
 
+import { BRAND } from '@/lib/brand.generated';
+
+
 // Database schema interfaces
 export interface MeetingMetadata {
   meetingId: string;          // Primary key: "meeting-{timestamp}"
@@ -31,7 +34,7 @@ export interface StoredTranscript {
 
 class IndexedDBService {
   private db: IDBDatabase | null = null;
-  private readonly DB_NAME = 'MeetilyRecoveryDB';
+  private readonly DB_NAME = `${BRAND.slug}-recovery`;
   private readonly DB_VERSION = 1;
   private initPromise: Promise<void> | null = null;
 

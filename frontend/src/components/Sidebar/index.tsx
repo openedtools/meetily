@@ -1,5 +1,6 @@
 'use client';
 
+import { BRAND } from '@/lib/brand.generated';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ChevronDown, ChevronRight, File, Folder, FolderOpen, FolderPlus, Users, Settings, ChevronLeftCircle, ChevronRightCircle, Calendar, StickyNote, Home, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, SearchIcon, X, Upload } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -741,7 +742,7 @@ const Sidebar: React.FC = () => {
             {!isCollapsed && (
               <div className="p-3">
                 {/* <span className="text-lg text-center border rounded-full bg-blue-50 border-white font-semibold text-gray-700 mb-2 block items-center">
-                  <span>Meetily</span>
+                  <span>{BRAND.name}</span>
                 </span> */}
                 <Logo isCollapsed={isCollapsed} />
 
