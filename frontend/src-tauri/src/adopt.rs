@@ -180,8 +180,13 @@ async fn build_in_staging(old_dir: &Path, staging: &Path, extras: &Extras) -> Re
 
 /// A consistent snapshot of the earlier database. It is read through a read-only connection, so
 /// its file is not changed and the earlier app can keep running.
+///
+/// A read-only connection to a write-ahead-log database still creates the `-wal` and `-shm` side
+/// files when they are missing, and cannot remove them afterwards. They are missing only when no
+/// app has the database open, so in that case it is opened as immutable, which creates nothing.
 async fn snapshot_database(from: &Path, to: &Path) -> Result<()> {
-    let options = SqliteConnectOptions::new().filename(from).read_only(true);
+    let old_app_has_it_open = side_file(from, "-wal").exists() || side_file(from, "-shm").exists();
+    let options = SqliteConnectOptions::new().filename(from).read_only(true).immutable(!old_app_has_it_open);
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
         .connect_with(options)
@@ -191,6 +196,12 @@ async fn snapshot_database(from: &Path, to: &Path) -> Result<()> {
     pool.close().await;
     result.context("could not copy the earlier database")?;
     Ok(())
+}
+
+fn side_file(db: &Path, suffix: &str) -> PathBuf {
+    let mut name = db.as_os_str().to_os_string();
+    name.push(suffix);
+    PathBuf::from(name)
 }
 
 /// Refuse a database saved by a newer version than this build understands: it would fail to open
@@ -600,6 +611,25 @@ mod tests {
         assert_eq!(before, after);
         // And the old app can still use its database
         sqlx::query("INSERT INTO meetings VALUES ('m3', 'Later')").execute(&pool).await.unwrap();
+    }
+
+    /// File names directly in `dir`, including SQLite's side files.
+    fn names(dir: &Path) -> Vec<String> {
+        let mut out: Vec<String> = fs::read_dir(dir).unwrap().filter_map(|e| e.ok()).map(|e| e.file_name().to_string_lossy().to_string()).collect();
+        out.sort();
+        out
+    }
+
+    #[tokio::test]
+    async fn adopting_while_the_old_app_is_closed_adds_no_files_to_the_old_folder() {
+        let (_root, old, new) = dirs();
+        let pool = old_install(&old).await;
+        pool.close().await; // a clean close removes the -wal and -shm side files
+        let before = names(&old);
+        assert!(!before.iter().any(|n| n.ends_with("-wal") || n.ends_with("-shm")), "{before:?}");
+        adopt_async(&old, &new, &Extras::default()).await.unwrap();
+        assert_eq!(names(&old), before);
+        assert_eq!(titles(&new.join(DB_FILE)).await, ["Weekly sync", "Planning"]);
     }
 
     #[tokio::test]

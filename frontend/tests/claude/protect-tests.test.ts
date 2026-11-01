@@ -39,10 +39,11 @@ beforeAll(() => {
   mkdirSync(path.join(dir, 'tests'));
   writeFileSync(path.join(dir, 'tests', 'a.test.ts'), 'test("x", () => {});\n');
   writeFileSync(path.join(dir, 'plain.ts'), 'export const a = 1;\n');
-  // Windows checkouts: CRLF line endings and capitalised folder names
+  // Windows checkouts: CRLF line endings and capitalised folder names.
+  // 'Tests' gets its own parent: on case-insensitive file systems it would collide with 'tests'.
   writeFileSync(path.join(dir, 'crlf.rs'), RUST_SOURCE.replace(/\n/g, '\r\n'));
-  mkdirSync(path.join(dir, 'Tests'));
-  writeFileSync(path.join(dir, 'Tests', 'b.ts'), 'test("y", () => {});\n');
+  mkdirSync(path.join(dir, 'win', 'Tests'), { recursive: true });
+  writeFileSync(path.join(dir, 'win', 'Tests', 'b.ts'), 'test("y", () => {});\n');
 });
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -98,7 +99,7 @@ describe('with LOCK_TESTS=1', () => {
   });
 
   test('a folder named Tests (capitalised, as on Windows) is protected too', () => {
-    expect(run(edit(path.join(dir, 'Tests', 'b.ts'), 'test'), true).code).toBe(2);
+    expect(run(edit(path.join(dir, 'win', 'Tests', 'b.ts'), 'test'), true).code).toBe(2);
   });
 
   test('CRLF files: a rewrite that keeps the tests is allowed, one that weakens them is blocked', () => {
