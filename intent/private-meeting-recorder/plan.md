@@ -27,6 +27,18 @@ Plan-mode exploration found facts that change the spec's assumptions. They are l
 | CI | None runs tests. All 8 workflows are manual builds. |
 | Rust dialog plugin | `tauri-plugin-dialog 2.3.0` already in `Cargo.toml`. |
 
+## WP1 baseline results (recorded 2026-11-01)
+
+| Check | Result |
+|---|---|
+| `cargo test --lib` (frontend/src-tauri) | **322 passed, 0 failed, 4 ignored**, exit 0. Two ignored tests need the speaker model and recordings, two need audio hardware or files. |
+| `bun test` (plain) | 26 pass, 19 fail. The same 19 fail at upstream's release commit `a2cb62e`, so they predate this fork. |
+| Cause of the 19 | Not code defects. `mock.module` leaks between test files in one bun process. Every file passes alone (45 of 45). |
+| Fix | `pnpm test` runs `bun test --isolate` (fresh global per file) plus `node --test` for the one node test file. No test was edited or removed. 45 + 1 pass. |
+| `tsc --noEmit` | Clean. |
+
+P3 therefore needed no test deletions. The two tests in `tests/lib/analytics.test.ts` go away in WP4 together with the module they test.
+
 ## Spec amendments found while planning
 
 1. **F-HK-6:** `docs/ARCHITECTURE.md` would collide with the existing `docs/architecture.md` on case-insensitive Windows. Upstream's long CLAUDE.md moves to `docs/UPSTREAM_NOTES.md` instead. Its link to the missing `AUDIO_MODULARIZATION_PLAN.md` is dropped.
