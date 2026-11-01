@@ -44,8 +44,8 @@ Priority: M = must for this spec, S = should (deferrable at the gate), C = could
 1. **F-ID-1 (M)** The app name, slug, bundle identifier, window title, installer name, default recordings folder name, vault folder name and About text come from one file, `brand/brand.json`. Changing the name is a one-line edit plus one command.
 2. **F-ID-2 (M)** A generator, `pnpm brand:apply`, writes the brand values into `tauri.conf.json` and a generated frontend module. `pnpm brand:check` fails if the generated files drift from `brand.json`.
 3. **F-ID-3 (M)** No user-visible string hard-codes the app name. They read it from the brand module.
-4. **F-ID-4 (M)** On first launch under a new identifier, if the old data folder (`com.meetily.ai`) exists and the new one does not, the app offers to copy the database, settings and downloaded models into the new folder. It copies, never moves, and leaves the old folder untouched. Legacy names stay recognised: the `.meetily_decode_` temp prefix in the deletion allowlist. The WebView profile (IndexedDB `MeetilyRecoveryDB`, local storage flags) also lives under the identifier and is not copied, so unsaved-meeting recovery data in the old app does not carry over. The adoption screen says so and asks you to open the old app and finish or recover any unsaved meeting first (to be verified on Windows).
-5. **F-ID-5 (M)** An About screen shows the name, version, "Based on Meetily by Zackriya Solutions, MIT licence", a link to the full MIT text, and third-party notices.
+4. **F-ID-4 (M)** On first launch under a new identifier, if the old data folder (`com.meetily.ai`) exists and the new one does not, the app offers to copy the database, settings and downloaded models into the new folder. It copies, never moves, and leaves the old folder untouched. The offer runs before any app state exists. The database is read through a consistent snapshot (`VACUUM INTO`), model files are hard-linked where possible, and the stores that record onboarding and the recordings folder are copied, so the new app does not repeat onboarding or re-download the models. The hard-coded `Meetily/templates` and `meetily/notifications.json` locations move into the new data folder. Legacy names stay recognised: the `.meetily_decode_` temp prefix in the deletion allowlist. The WebView profile (IndexedDB `MeetilyRecoveryDB`, local storage flags) also lives under the identifier and is not copied, so unsaved-meeting recovery data in the old app does not carry over. The adoption screen says so and asks you to open the old app and finish or recover any unsaved meeting first (to be verified on Windows).
+5. **F-ID-5 (M)** An About screen shows the name, version, "Based on Meetily by Zackriya Solutions, MIT licence", a link to the full MIT text, and third-party notices. The upstream marketing block and the analytics switch are removed from it.
 6. **F-ID-6 (M)** The upstream MIT copyright and permission notice stays in `LICENSE.md`. A second copyright line for your modifications may be added (your choice of holder name).
 7. **F-ID-7 (M)** No Meetily logo, icon or name is used as branding. All icons (app, tray, installer images) are replaced by the original icon (section 3.2).
 8. **F-ID-8 (M)** No code, text or assets from Meetily's paid Pro tier. The Pro scaffolding found in section 1 is removed (F-HK-1).
@@ -55,7 +55,7 @@ Priority: M = must for this spec, S = should (deferrable at the gate), C = could
 1. **F-UI-1 (M)** Colours, type, radii and spacing are design tokens in one file, `frontend/src/styles/tokens.css`. Tailwind and the shadcn variables read from it. No component sets a raw colour.
 2. **F-UI-2 (M)** Light and dark themes. Default follows the operating system. The user can force light or dark in Settings. The forced `"theme": "Light"` window setting in `tauri.conf.json` is removed so the window can follow the system.
 3. **F-UI-3 (M)** Every text and control colour pair meets WCAG 2.2 AA: 4.5:1 for normal text, 3:1 for large text, icons and control borders. Each token pair carries a role in `tokens.contrast.json` (text, large text or icon or border, decorative, or exempt such as disabled). A script computes the ratios from `tokens.css` and fails the build when a pair is below its role's threshold. Hover, pressed, selected, placeholder and disabled states have their own tokens.
-4. **F-UI-4 (M)** Serif for the wordmark and headings, sans for body text. Both are open-licence fonts bundled in the repository, so the app and its build need no network.
+4. **F-UI-4 (M)** Serif for the wordmark and headings, sans for body text. Both are open-licence fonts shipped through pinned fontsource packages, so the app and its build need no network after the packages are installed.
 5. **F-UI-5 (M)** Generous spacing on an 8 px grid, soft corners (10 px cards, 8 px controls), no drop shadows except a visible focus ring.
 6. **F-UI-6 (M)** Few controls: each main screen has one primary action, and secondary actions sit in an overflow menu or settings.
 7. **F-UI-7 (M)** The 1,283 raw palette class uses are replaced with semantic token classes by a codemod, screen by screen. A lint rule then forbids raw palette classes and hex colours outside `tokens.css`.
@@ -127,12 +127,12 @@ Priority: M = must for this spec, S = should (deferrable at the gate), C = could
 10. **F-SYNC-10 (M)** Voiceprints, keys, models and settings never enter the vault.
 
 ### 2.9 Housekeeping (F-HK)
-1. **F-HK-1 (M)** Remove Pro scaffolding: the `licensing` table (new migration that drops it), the profile commands and `license_key` structures, and the profile calls to the local app server on port 5167. Applied migrations are not edited.
+1. **F-HK-1 (M)** Remove Pro scaffolding: the `licensing` table (new migration that drops it), the profile commands and `license_key` structures, and the profile calls to the local app server on port 5167. Applied migrations are not edited. The two backend-connection test commands, the `localhost:5167` CSP entry and the sidebar's server address, which only served the archived backend, go too.
 2. **F-HK-2 (M)** Remove the telemetry code, its dependency and its settings toggles, so that "nothing is sent" is provable from the dependency list.
-3. **F-HK-3 (M)** Remove files confirmed unreferenced (`lib_old_complex.rs`, `core-old.rs`, `recording_saver_old.rs`, `recording_commands.rs.backup`) and the unused `meeting_notes` table if nothing reads it.
+3. **F-HK-3 (M)** Remove files confirmed unreferenced (`lib_old_complex.rs`, `core-old.rs`, `recording_saver_old.rs`, `recording_commands.rs.backup`, `audio/stt.rs`, `audio/system_audio_stream.rs`, `audio/system_audio_types.ts`, `whisper_engine/_stderr_suppressor.rs`, `audio_v2/`, `CLEANUP_PLAN.md`, `build_backup.bat`, `app/metadata.ts` and `.tsx`, the empty `AudioPlayer.tsx`), each only after the compiler and typechecker confirm nothing uses it. The unused `meeting_notes` table is dropped in the same new migration as `licensing`.
 4. **F-HK-4 (M)** Disable the updater until the fork has its own signing key. The upstream public key in `tauri.conf.json` means updates from this fork could not verify anyway. This touches the plugin registration in `lib.rs`, the update dialog, About and the tray.
 5. **F-HK-5 (M)** Remove the 119 em dashes from source (code comments and a few user-visible strings) and add a lint that fails on U+2014 in any tracked text file. No exemptions are needed today, because no other tracked file has one.
-6. **F-HK-6 (M)** Replace `CLAUDE.md` with a one-page version: build, test and lint commands, conventions, folder map, things Claude gets wrong, and a verify-before-done block. Move upstream's long document to `docs/ARCHITECTURE.md`.
+6. **F-HK-6 (M)** Replace `CLAUDE.md` with a one-page version: build, test and lint commands, conventions, folder map, things Claude gets wrong, and a verify-before-done block. Move upstream's long document to `docs/UPSTREAM_NOTES.md` (not `docs/ARCHITECTURE.md`, which would collide with the existing `docs/architecture.md` on case-insensitive Windows).
 7. **F-HK-7 (S)** Make the recordings folder a real setting: the recorder and the importer honour the saved preference (today they ignore it) and Settings gets a folder picker. New installs default to the app data folder (`recordings`). The picker warns when the chosen folder is inside OneDrive, iCloud Drive or Dropbox. Existing installs keep recording to `Music\meetily-recordings` until they choose otherwise (D3a).
 8. **F-HK-8 (S)** Verify the licence of the bundled Windows ffmpeg build (section 7, concern 17).
 9. **F-HK-9 (M)** Before the first run of a newer migration set, the app copies `meeting_minutes.sqlite` to a dated backup next to it, and keeps the last three backups. Migrations are one way, and a backup is the only downgrade path.
@@ -148,7 +148,7 @@ Priority: M = must for this spec, S = should (deferrable at the gate), C = could
 ## 3. Design
 
 ### 3.1 Brand configuration and rename
-* `brand/brand.json` holds: `name`, `slug`, `bundleId`, `windowTitle`, `installerName`, `recordingsDirName`, `vaultDirName`, `tagline`, `upstreamCredit`. `bundleId` defaults to `com.<owner>.<slug>`.
+* `brand/brand.json` holds: `name`, `slug`, `bundleId`, `windowTitle`, `installerName`, `recordingsDirName`, `vaultDirName`, `tagline`, `upstreamCredit`. `bundleId` is `com.openedtools.notes`. It is deliberately not derived from the name, because the identifier names the data folder, so a later rename never moves user data. In CSS and Tailwind the `muted` text token is named `ink-muted`, because shadcn already uses `muted` for a background.
 * `scripts/brand-apply.mjs` reads it and writes `productName`, `mainBinaryName`, `identifier` and window titles into `tauri.conf.json`, and `frontend/src/lib/brand.generated.ts` for the UI. `--check` compares without writing. Crate and package names stay as they are, because renaming the Rust library breaks `RUST_LOG` filters and build scripts for no user benefit.
 * Rust code that needs the name reads it from the generated module at compile time, not from string literals.
 * The vault's format identifiers (`quire-vault`, `quire-format.json`, the `quire` front matter key) are deliberately not brand values and do not change on a rename (see `sync-format.md`).
@@ -356,7 +356,7 @@ All checks are run in Stage 4 and their output is pasted into the pull request. 
 | AC-SYNC-8 | Sync screen | UI and filesystem tests | No file is written before the folder is chosen and confirmed; the disclosure shows before the first write; audio sync is off by default; Off and transcript-only recordings are never uploaded with audio sync on; turning sync off leaves files and stops writes; removing the app's vault files needs a separate confirmation |
 | AC-SYNC-9 | Never synced | Test over an exported vault | No voiceprint, key, model file or setting appears in any file |
 | AC-HK-5 | Dead code and updater | `rg` and build | Listed dead files are gone and the build passes; the updater plugin, dialog, About and tray entries are removed or disabled; no network call to the updater endpoint |
-| AC-HK-6 | CLAUDE.md and hook | Review | CLAUDE.md is under one page with build, test, lint and a verify block; the hook blocks edits to test files unless `ALLOW_TEST_EDITS` is set |
+| AC-HK-6 | CLAUDE.md and hook | Review | CLAUDE.md is under one page with build, test, lint and a verify block; the hook blocks edits to existing test files when `LOCK_TESTS=1` is set (used for bug-fix tasks, so new tests can still be written in feature work) |
 | AC-HK-7 | Recordings folder | Tests | The recorder and the importer write to the saved preference; the picker warns for a path inside OneDrive, iCloud Drive or Dropbox; a new install defaults to the app data folder |
 | AC-HK-8 | ffmpeg licence | Run `ffmpeg -version` on the bundled binary | The result is recorded in the PR; if it is GPL, one of the three resolutions in concern 17 is applied |
 | AC-HK-9 | Migration backup | Test | A dated backup exists before a new migration runs; only the last three are kept |
@@ -501,7 +501,7 @@ Not applied, because none exist in this session: any organization security, bran
 | 26 | Logs may carry transcript text at debug level. | Privacy | Ryan | Audit and test (NF-6, AC-HK-4). |
 | 27 | Cloud model providers and custom endpoints can send transcript text off the computer. | intent.md | Ryan | Master cloud switch, labels, confirmation, non-local host warning (F-MOD-5, F-MOD-7). |
 | 28 | Process: the repository CLAUDE.md is upstream's, 409 lines, and describes a legacy backend. | SDLC skill | Ryan | Replaced in Phase A (F-HK-6). Not written yet because Stage 3 has not started. |
-| 29 | Model downloads for Whisper and Parakeet are not hash-pinned like the speaker model and ffmpeg. | Security review | Ryan | Manifest with SHA-256 (F-MOD-8, should). |
+| 29 | Model downloads for Whisper and Parakeet are not hash-pinned like the speaker model and ffmpeg. | Security review | Ryan | Manifest with SHA-256 (F-MOD-8, should). The Parakeet v3 download also uses an upstream-hosted address, a single point of failure for onboarding, to be reviewed in Phase C. |
 | 30 | The Windows installer build is CPU-only, so prompt processing on a large transcript may be slow beside Parakeet. | Performance, intent open question 3 | Ryan | Small starting context budgets, tuned by benchmark (F-QA-3, AC-QA-3). For your own PC a CUDA build is possible with the RTX 3070 Ti (confirm its video memory in Task Manager; the laptop part normally has 8 GB). It is a separate build profile from the shared portable installer, scheduled in Phase D. |
 | 31 | Migrations are one way. A newer build that migrates the database cannot be undone by installing an older build. | Reliability | Ryan | Dated database backup before migration (F-HK-9). |
 | 32 | Antivirus scanners, the audio player and sync clients can lock audio files on Windows, which blocks deletion. | Windows behaviour | Ryan | Retry-based deletion, a "deletion pending" status, and never a false "deleted" (F-RET-6). |
@@ -557,3 +557,18 @@ A reviewer that had not seen the drafting checked these documents against `inten
 * Left for the plan: key migration code, narrowing the WebView file permissions, and the benchmark thresholds.
 
 These revisions have not had a second independent pass. A fresh-session read of the final spec is recommended after you accept or revise.
+
+## 11. Amendments after planning (2026-11-01)
+
+Plan-mode exploration for Phase A found facts that change some assumptions. The spec text above has been amended to match, and `plan.md` records the reasoning.
+
+1. F-HK-6: upstream's long document moves to `docs/UPSTREAM_NOTES.md`, not `docs/ARCHITECTURE.md` (case collision on Windows).
+2. AC-HK-6: the hook locks existing tests when `LOCK_TESTS=1` is set.
+3. F-UI-4: fonts ship through pinned fontsource packages.
+4. Token `muted` is `ink-muted` in CSS and Tailwind.
+5. F-ID-4 and the identifier: `com.openedtools.notes`, name-independent. Adoption is more than a folder copy (stores, hard links, snapshot of the database, runs before app state exists).
+6. F-HK-1: backend-connection commands, the 5167 CSP entry and the sidebar server address also go.
+7. F-HK-3: the dead-file list is longer, and one migration drops both unused tables.
+8. F-ID-5: the About screen drops the upstream marketing block and the analytics switch.
+9. Acceptance criteria are assigned to phases in `plan.md`. AC-HK-3 moves to Phase C and AC-HK-4 to Phase B.
+10. Concern 29: the Parakeet v3 model host is upstream-hosted.
