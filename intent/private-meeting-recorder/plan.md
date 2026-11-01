@@ -209,6 +209,12 @@ AC-ID-1 to AC-ID-6, AC-UI-1 to AC-UI-8 (AC-UI-9 only if the illustration is supp
 | E. Vault export | Format library and fixtures, one-way export, Sync screen, disclosure | AC-SYNC-1, 2, 5, 6, 8, 9, export part of AC-NF-1 and AC-NF-2 |
 | F. Two-way sync | Import, conflicts, deletion propagation, after the device checks | AC-SYNC-3, 4, 7 |
 
+Feedback from the A1 and A2 Windows tests, to place when those phases are planned:
+
+* **Phase C:** a summary through a local OpenAI-compatible server (LM Studio) failed because Quire sends the whole transcript to a custom address in one request (`summary/service.rs`, threshold 100000). It needs the model's context size, from a setting or from the server, and chunking like Ollama. Also: let the built-in engine use a GGUF from a folder the person picks (for example LM Studio's), so models are not downloaded twice.
+* **Speakers (phase to be decided):** speaker detection separated a male and a female voice but mixed up two female voices.
+* **Build (decide before Linux builds):** there is no `.gitattributes`, so migration files have CRLF on Windows and LF on Linux, and sqlx checksums differ between the two. Databases made by Windows builds would be refused by a Linux build.
+
 ## Deviations from this plan (recorded as the work proceeds)
 
 | WP | Plan said | What was done | Why |
