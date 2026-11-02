@@ -32,7 +32,7 @@ test('record screen', async ({ page }) => {
 });
 
 test('meeting: transcript and summary', async ({ page }) => {
-  await open(page, '/meeting-details?id=m1');
+  await open(page, '/meeting-details?id=meeting-1');
   await shot(page, '02-meeting');
 });
 
@@ -72,17 +72,24 @@ test('dialog: delete meeting', async ({ page }) => {
   await open(page, '/');
   await showSidebar(page);
   await page.getByText('Course design sync').first().hover();
-  const del = page.getByRole('button', { name: 'Delete meeting' }).first();
-  if (await del.isVisible()) {
-    await del.click();
-    await page.waitForTimeout(400);
-    await shot(page, '07-dialog-delete');
-  }
+  // The delete button only shows on hover, so click it directly
+  await page.getByRole('button', { name: 'Delete meeting' }).first().click({ force: true });
+  await page.waitForTimeout(400);
+  await shot(page, '07-dialog-delete');
+});
+
+test('about', async ({ page }) => {
+  await open(page, '/');
+  await page.getByRole('button', { name: 'About Quire' }).first().click();
+  await page.waitForTimeout(500);
+  await page.locator('summary', { hasText: 'Third-party notices' }).click();
+  await page.waitForTimeout(300);
+  await shot(page, '08-about');
 });
 
 test('no page errors on the main screens', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  for (const url of ['/', '/meeting-details?id=m1', '/people', '/settings']) await open(page, url);
+  for (const url of ['/', '/meeting-details?id=meeting-1', '/people', '/settings']) await open(page, url);
   expect(errors).toEqual([]);
 });

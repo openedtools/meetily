@@ -16,5 +16,3 @@ frontend/src/components/DatabaseImport/** | imports databases from earlier insta
 frontend/src/contexts/OnboardingContext.tsx | looks for the upstream product's Homebrew database path
 frontend/src-tauri/src/parakeet_engine/parakeet_engine.rs | model download address on an upstream-hosted server (reviewed in Phase C)
 
-# Temporary: removed by a later work package in the Phase A plan
-frontend/src/components/About.tsx | About screen is rewritten in WP7 (upstream contact link)

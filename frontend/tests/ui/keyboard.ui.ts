@@ -4,7 +4,7 @@ import path from 'node:path';
 // AC-UI-4: every control is reachable with Tab, shows a visible focus indicator,
 // and is at least 24 by 24 px (WCAG 2.2 target size, minimum).
 const MOCK = path.join(__dirname, 'mock-tauri.js');
-const SCREENS = ['/', '/meeting-details?id=m1', '/people', '/settings'];
+const SCREENS = ['/', '/meeting-details?id=meeting-1', '/people', '/settings'];
 const MIN = 24;
 
 type Stop = { key: string; label: string; w: number; h: number; focusVisible: boolean };

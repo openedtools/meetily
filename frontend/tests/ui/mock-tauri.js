@@ -7,10 +7,10 @@
   const now = '2026-10-30T14:00:00Z';
 
   const meetings = [
-    { id: 'm1', title: 'Weekly planning', folder_id: 'f1', created_at: now, updated_at: now },
-    { id: 'm2', title: 'Budget review with finance', folder_id: 'f1', created_at: now, updated_at: now },
-    { id: 'm3', title: 'Course design sync', folder_id: null, created_at: now, updated_at: now },
-    { id: 'm4', title: 'One to one', folder_id: 'f2', created_at: now, updated_at: now },
+    { id: 'meeting-1', title: 'Weekly planning', folder_id: 'f1', created_at: now, updated_at: now },
+    { id: 'meeting-2', title: 'Budget review with finance', folder_id: 'f1', created_at: now, updated_at: now },
+    { id: 'meeting-3', title: 'Course design sync', folder_id: null, created_at: now, updated_at: now },
+    { id: 'meeting-4', title: 'One to one', folder_id: 'f2', created_at: now, updated_at: now },
   ];
   const folders = [
     { id: 'f1', name: 'Planning', meeting_count: 2 },
@@ -68,7 +68,7 @@
     speaker_model_status: () => ({ downloaded: true, size_bytes: 28000000 }),
     api_list_people: () => people,
     api_get_person: ({ personId }) => ({ person: { id: personId, name: people.find((p) => p.id === personId)?.name ?? 'Alex Morgan', created_at: now, updated_at: now, notes: 'Runs the planning group.' }, meetings: meetings.slice(0, 3).map((m) => ({ meeting_id: m.id, title: m.title, created_at: now, folder_id: m.folder_id, line_count: 4, first_line_start: 0 })), voice_meetings: 2 }),
-    api_get_person_lines: () => transcripts.slice(0, 3).map((t) => ({ transcript_id: t.id, meeting_id: 'm1', meeting_title: 'Weekly planning', meeting_created_at: now, text: t.text, audio_start_time: t.audio_start_time })),
+    api_get_person_lines: () => transcripts.slice(0, 3).map((t) => ({ transcript_id: t.id, meeting_id: 'meeting-1', meeting_title: 'Weekly planning', meeting_created_at: now, text: t.text, audio_start_time: t.audio_start_time })),
     api_get_model_config: () => ({ provider: 'builtin-ai', model: 'qwen3.5:4b', whisperModel: 'large-v3', apiKey: null, ollamaEndpoint: null }),
     api_get_transcript_config: () => ({ provider: 'parakeet', model: 'parakeet-tdt-0.6b-v3-int8', apiKey: null }),
     api_get_api_key: () => '',

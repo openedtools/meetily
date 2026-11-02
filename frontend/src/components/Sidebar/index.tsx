@@ -576,7 +576,7 @@ const Sidebar: React.FC = () => {
               )}
               <span className="font-medium flex-1 truncate" title={item.title}>{item.title}</span>
               <span className="text-xs text-ink-muted mx-1">{item.children?.length ?? 0}</span>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -637,7 +637,7 @@ const Sidebar: React.FC = () => {
                 )}
                 <span className="flex-1 break-words">{item.title}</span>
                 {isMeetingItem && (
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150">
                     <MoveToFolderMenu
                       meetingId={item.id}
                       currentFolderId={meetings.find(m => m.id === item.id)?.folder_id}

@@ -1,6 +1,5 @@
 import { BRAND } from '@/lib/brand.generated';
 import React from "react";
-import Image from "next/image";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { VisuallyHidden } from "./ui/visually-hidden";
 import { About } from "./About";
@@ -9,40 +8,35 @@ interface LogoProps {
   isCollapsed: boolean;
 }
 
+/** The mark when the sidebar is collapsed, the serif wordmark when it is open. Opens About. */
 const Logo = React.forwardRef<HTMLButtonElement, LogoProps>(
   ({ isCollapsed }, ref) => {
     return (
       <Dialog aria-describedby={undefined}>
-        {isCollapsed ? (
-          <DialogTrigger asChild>
+        <DialogTrigger asChild>
+          {isCollapsed ? (
             <button
               ref={ref}
               type="button"
-              className="flex items-center justify-center mb-2 cursor-pointer bg-transparent border-none p-0 hover:opacity-80 transition-opacity"
+              className="flex items-center justify-center mb-2 rounded-control p-1 hover:bg-surface-hover transition-colors"
               aria-label={`About ${BRAND.name}`}
             >
-              <Image
-                src="/logo-collapsed.png"
-                alt={BRAND.name}
-                width={40}
-                height={40}
-                className="object-contain"
-                priority
-              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon.svg" alt="" width={36} height={36} />
             </button>
-          </DialogTrigger>
-        ) : (
-          <DialogTrigger asChild>
+          ) : (
             <button
               ref={ref}
               type="button"
-              className="w-full text-lg text-center border rounded-full bg-accent-tint border-paper font-semibold text-ink mb-2 block items-center cursor-pointer hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="w-full flex items-center gap-2 mb-2 rounded-control px-2 py-1 hover:bg-surface-hover transition-colors"
               aria-label={`About ${BRAND.name}`}
             >
-              <span>{BRAND.name}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon.svg" alt="" width={28} height={28} />
+              <span className="font-serif text-2xl text-ink">{BRAND.name}</span>
             </button>
-          </DialogTrigger>
-        )}
+          )}
+        </DialogTrigger>
         <DialogContent>
           <VisuallyHidden>
             <DialogTitle>About {BRAND.name}</DialogTitle>

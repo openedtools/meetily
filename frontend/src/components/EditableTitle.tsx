@@ -66,7 +66,7 @@ export const EditableTitle: React.FC<EditableTitleProps> = ({
       <div className="flex space-x-1">
         <button 
           onClick={onStartEditing}
-          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-surface-hover rounded"
+          className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-200 p-1 hover:bg-surface-hover rounded"
           title="Edit section title"
         >
           <svg 
@@ -86,7 +86,7 @@ export const EditableTitle: React.FC<EditableTitleProps> = ({
         {onDelete && (
           <button 
             onClick={onDelete}
-            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-surface-hover rounded text-danger"
+            className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-200 p-1 hover:bg-surface-hover rounded text-danger"
             title="Delete section"
           >
             <svg 

@@ -44,6 +44,8 @@ const nextConfig = {
         'prosemirror-dropcursor': resolveFromTiptapPm('prosemirror-dropcursor'),
       };
     }
+    // LICENSE.md and THIRD_PARTY_NOTICES.md are shown in About as plain text
+    config.module.rules.push({ test: /\.md$/, type: 'asset/source' });
     return config;
   },
 }

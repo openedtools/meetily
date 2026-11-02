@@ -4,6 +4,7 @@ import '@fontsource-variable/source-sans-3'
 import '@fontsource-variable/source-serif-4'
 import '@/styles/tokens.css'
 import './globals.css'
+import { BRAND } from '@/lib/brand.generated'
 import Sidebar from '@/components/Sidebar'
 import { SidebarProvider } from '@/components/Sidebar/SidebarProvider'
 import MainContent from '@/components/MainContent'
@@ -232,6 +233,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <title>{BRAND.windowTitle}</title>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
       <body className="font-sans antialiased">
