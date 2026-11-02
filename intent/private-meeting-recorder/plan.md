@@ -201,11 +201,13 @@ AC-ID-1 to AC-ID-6, AC-UI-1 to AC-UI-8 (AC-UI-9 only if the illustration is supp
 
 ## Later phases (each gets its own plan section and gate)
 
+Order from 2026-11-01: A, then D (Live Q&A and My notes), then B, C, E, F (spec section 12).
+
 | Phase | Content | Acceptance criteria |
 |---|---|---|
 | B. Privacy core | Retention, sweep, finalizer, transcript-only, consent reminder, first-run notice | AC-RET-1 to 15, AC-TO-1 to 4, AC-CON-1 to 3, AC-HK-4, sweep and reminder parts of AC-NF-1 and AC-NF-2 |
 | C. Models | Models screen, cloud switch, Credential Manager, download manifest (and the Parakeet host question) | AC-MOD-1 to 6, AC-QA-5, AC-HK-3 |
-| D. Live Q&A | Benchmark in two profiles (CPU and CUDA for the RTX 3070 Ti), context builder, Ask box | AC-QA-1 to 4, AC-QA-6, AC-QA-7 |
+| D. Live Q&A and My notes (next after A) | My notes pane and storage, notes in the summary prompt, benchmark in two profiles (CPU and CUDA for the RTX 3070 Ti), context builder, Ask box | AC-QA-1 to 4, AC-QA-6, AC-QA-7, AC-NOTE-1 to 5 |
 | E. Vault export | Format library and fixtures, one-way export, Sync screen, disclosure | AC-SYNC-1, 2, 5, 6, 8, 9, export part of AC-NF-1 and AC-NF-2 |
 | F. Two-way sync | Import, conflicts, deletion propagation, after the device checks | AC-SYNC-3, 4, 7 |
 | WP5 | Tokens from spec 3.2 plus hover and pressed variants | Also `surface-hover`, `accent-tint`, `danger-tint`, `success-tint`, `warning-tint`, eight speaker pairs and HSL copies of eleven tokens for BlockNote. All text pairs are in `tokens.contrast.json` (89 checks) | The codemod needed tints for alerts and badges; BlockNote's precompiled CSS reads `hsl(var(--x))` |

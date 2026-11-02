@@ -137,6 +137,16 @@ Priority: M = must for this spec, S = should (deferrable at the gate), C = could
 8. **F-HK-8 (S)** Verify the licence of the bundled Windows ffmpeg build (section 7, concern 17).
 9. **F-HK-9 (M)** Before the first run of a newer migration set, the app copies `meeting_minutes.sqlite` to a dated backup next to it, and keeps the last three backups. Migrations are one way, and a backup is the only downgrade path.
 
+### 2.11 My notes (F-NOTE)
+Added after the A3 review on 2026-11-01, at Ryan's request (modelled on how Granola combines your notes with the transcript).
+1. **F-NOTE-1 (M)** A "My notes" pane in the meeting view beside the summary, on the live recording screen and on saved meetings. It is a plain rich-text editor that saves on its own; there is no Save button.
+2. **F-NOTE-2 (M)** Notes are stored on this computer in SQLite with their meeting, are included in the database backup (F-HK-9), and are deleted with the meeting. Notes typed during a recording are saved within 2 seconds of the last keystroke and survive a crash: they are recovered with the meeting.
+3. **F-NOTE-3 (M)** When notes exist, summary generation uses them as the person's own notes: their points come first and set the outline, the transcript fills in detail, their wording is kept for their points, and a disagreement between the notes and the transcript is flagged rather than silently resolved. With no notes the summary is generated exactly as before.
+4. **F-NOTE-4 (M)** Generating or regenerating a summary never changes the notes. Notes and summary stay separate documents.
+5. **F-NOTE-5 (M)** Ask (F-QA) reads the notes as well as the transcript. Note text is labelled as the person's notes in the model context, and an answer that relies on it says "your notes" instead of a timestamp.
+6. **F-NOTE-6 (S)** In the summary, points that came from the notes are visually distinct from points the model added.
+7. **F-NOTE-7 (M)** Notes follow the same privacy rules as the transcript: they leave the computer only when a cloud provider is chosen for summary or Ask, and the same disclosure applies. Vault export of notes is part of Phase E.
+
 ### 2.10 Non-functional (NF)
 1. **NF-1 Offline by default.** With sync off and the cloud switch off, the only network traffic is a model download the user starts. A network inventory test lists every outbound call site with the setting that enables it, and fails when a call site is added without an entry.
 2. **NF-2 Accessibility.** WCAG 2.2 AA for contrast and keyboard use (F-UI-3, F-UI-8). Touch and click targets at least 24 by 24 px.
@@ -256,6 +266,14 @@ Read more page:
 ### 3.8 Data flow summary
 Recording audio goes to the pipeline. Mixed audio goes to the recorder (absent in transcript-only mode). Speech segments go to the transcription engine, then to the live buffer and the Ask box. On stop, the finalizer saves the transcript to SQLite, optionally detects speakers, exports to the vault, then the retention routine deletes audio according to policy. The sweep and the vault scanner run in the background. Nothing leaves the computer except through iCloud's own client (if sync is on) and the cloud providers the user explicitly enabled.
 
+### 3.10 My notes
+* Storage: a new migration adds a `meeting_user_notes` table (`meeting_id` primary key referencing `meetings`, `body_markdown`, `body_blocks` JSON for the editor, `updated_at`). The `meeting_notes` table dropped in WP4.5 was unused upstream scaffolding and is not revived.
+* During a live recording the meeting row does not exist yet, so notes are written under the recording session id to a small recovery store and attached to the meeting when it is saved, using the same path as transcript recovery.
+* Commands `api_get_user_notes(meeting_id)` and `api_save_user_notes(meeting_id, blocks, markdown)`, debounced in the UI (save 1 second after the last keystroke, and on blur and on navigation).
+* Summary prompt: the notes go into the final report step as an `<attendee_notes>` block before the transcript chunks, with the F-NOTE-3 rules in the system prompt. Chunk summaries do not repeat the notes, to save context. Note text is treated as untrusted content in the same way as transcript text (F-QA-7).
+* Ask context builder: the notes are always included (they are short), labelled `[your notes]`, ahead of the retrieved transcript lines.
+* UI: the right-hand pane gets two tabs, My notes and Summary. During a recording My notes is the default; after a summary is generated the Summary tab opens. The Ask box sits under both.
+
 ### 3.9 Brand image prompts (for ChatGPT's image generator)
 
 Use these to explore looks. Treat the output as concept art. The production icon is redrawn as a clean SVG from the chosen idea, because generated rasters are rarely clean at 16 px and cannot be recoloured exactly. Do not feed Meetily's logo or any other app's logo to the generator as a reference, since the icon has to be original. Keep the prompt, tool, date and your choice in `brand/ASSETS.md`. Check the generator's current terms before an App Store release. For the wordmark, set the text in Source Serif 4 inside the app, since image generators misspell text.
@@ -350,6 +368,11 @@ All checks are run in Stage 4 and their output is pasted into the pull request. 
 | AC-TO-4 | Wording | Review | The text matches F-TO-4 and the one-sentence difference between Off and transcript-only is shown (F-TO-5) |
 | AC-QA-6 | Priority and cancel | Test with a stalled model and a growing transcription backlog | Cancel stops generation within 2 s; recording continues; a request is refused with a message when the backlog is over the limit |
 | AC-QA-7 | Session, note, safety, no model | UI and unit tests | History is gone after restart; "Add to note" appends a labelled block; a hostile answer (HTML, script) renders inert; with no model the box shows the download prompt |
+| AC-NOTE-1 | Notes persist | Rust test and UI test: type notes on a saved meeting and during a recording, restart | Notes are back unchanged; notes typed during a recording are attached to the saved meeting; deleting the meeting deletes them |
+| AC-NOTE-2 | Notes in the summary | Unit test on the prompt builder | With notes, the final step contains one `<attendee_notes>` block and the F-NOTE-3 rules; without notes the prompt is byte-identical to today's |
+| AC-NOTE-3 | Summary never edits notes | Test: generate and regenerate a summary on a meeting with notes | The stored notes are unchanged |
+| AC-NOTE-4 | Crash safety | Test: write notes, stop without saving the meeting, recover | Notes come back with the recovered meeting |
+| AC-NOTE-5 | Ask reads notes | Unit test on the context builder | Notes are included, labelled `[your notes]`, ahead of transcript lines |
 | AC-MOD-4 | Cloud switch rules | Tests | Turning the switch on shows the confirmation naming what is sent; an upgrade with a configured cloud provider starts on with a notice and a fresh install starts off; with the credential store unavailable the app refuses to save a key and writes no plaintext |
 | AC-MOD-5 | Download manifest | Test with a corrupted download | A hash mismatch deletes the file and refuses to load it |
 | AC-MOD-6 | API transcription | Test and review | Each provider is labelled "Sends audio to ..." and unavailable with the switch off; providers that fail end to end are hidden |
@@ -407,6 +430,10 @@ Every requirement maps to at least one criterion. `scripts/check-traceability.mj
 | F-QA-4 | AC-QA-2 |
 | F-QA-5 | AC-QA-3, AC-QA-6 |
 | F-QA-6, F-QA-7, F-QA-8 | AC-QA-7 |
+| F-NOTE-1, F-NOTE-2 | AC-NOTE-1, AC-NOTE-4 |
+| F-NOTE-3, F-NOTE-4, F-NOTE-6 | AC-NOTE-2, AC-NOTE-3 |
+| F-NOTE-5 | AC-NOTE-5 |
+| F-NOTE-7 | AC-QA-4, AC-QA-5 |
 | F-CON-1, F-CON-2, F-CON-3 | AC-CON-1 |
 | F-CON-4, F-CON-5 | AC-CON-2 |
 | F-CON-6 | AC-CON-3 |
@@ -540,7 +567,7 @@ Each phase is independently shippable, ends in its own tests and an independent 
 * **A. Identity, tokens, housekeeping.** Brand config and generator, data adoption, tokens, fonts, codemod and lint, icon, About, removal of Pro, telemetry and dead files, updater off, em dash lint, database backup before migration, the recordings folder setting, the sage token and the aesthetic reference, one-page CLAUDE.md with verify block and a hook that locks tests during bug-fix tasks. Largest phase because of the re-skin.
 * **B. Privacy core.** Retention setting, sweep and its guards, detect-on-save, per-recording transcript-only with a finalization path, the audio-only deletion function and two-phase meeting delete, consent reminder, first-run notice. Failing tests first for every deletion rule.
 * **C. Models.** Models screen, cloud switch, Credential Manager migration, model manifest.
-* **D. Live Q&A.** Benchmark on your PC in two profiles (portable CPU and a CUDA build for the RTX 3070 Ti), context builder, Ask box, citations.
+* **D. Live Q&A and My notes.** My notes pane and storage (F-NOTE), notes in the summary prompt, benchmark on your PC in two profiles (portable CPU and a CUDA build for the RTX 3070 Ti), context builder, Ask box, citations. Moved to run straight after Phase A (see section 12).
 * **E. Vault export.** Format library with fixtures, one-way export, Sync screen, disclosure.
 * **F. Two-way sync.** Import, conflicts, deletion propagation, real-device verification first.
 
@@ -572,3 +599,9 @@ Plan-mode exploration for Phase A found facts that change some assumptions. The 
 8. F-ID-5: the About screen drops the upstream marketing block and the analytics switch.
 9. Acceptance criteria are assigned to phases in `plan.md`. AC-HK-3 moves to Phase C and AC-HK-4 to Phase B.
 10. Concern 29: the Parakeet v3 model host is upstream-hosted.
+
+## 12. Amendments after the A3 review (2026-11-01)
+
+* Added section 2.11 My notes (F-NOTE-1 to F-NOTE-7), design 3.10 and AC-NOTE-1 to AC-NOTE-5, at Ryan's request.
+* Phase D (Live Q&A, now with My notes) runs straight after Phase A, before B, C, E and F, because notes and Ask share the meeting's right-hand pane and Ryan wants them first. Order: A, D, B, C, E, F.
+* The final icon is Ryan's own artwork (`brand/source`), replacing the SVG concept in 3.2. Section headings are sans; serif stays for the wordmark and page titles (a change to F-UI-4). Corners are 8 px for cards and 6 px for controls (a change to F-UI-5).
