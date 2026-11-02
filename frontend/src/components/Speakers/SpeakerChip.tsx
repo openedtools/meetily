@@ -61,7 +61,7 @@ export const SpeakerChip = memo(function SpeakerChip({ transcriptId, speakerKey,
         type="button"
         className={cn(
           'mb-1 inline-flex max-w-full items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',
-          'transition-colors hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400',
+          'transition-colors hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
           speakerColorClasses(speakerKey),
         )}
         title={familiar ? `Sounds like ${familiar.person_name}. Click to confirm or name this speaker` : "Click to name this speaker or change this line's speaker"}
@@ -73,8 +73,8 @@ export const SpeakerChip = memo(function SpeakerChip({ transcriptId, speakerKey,
       <button
         type="button"
         className={cn(
-          'mt-0.5 flex-shrink-0 rounded p-1 text-gray-300 transition-opacity',
-          'hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400',
+          'mt-0.5 flex-shrink-0 rounded p-1 text-ink-muted transition-opacity',
+          'hover:bg-surface-hover hover:text-ink-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
           open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
         )}
         title={speakerKey ? `${label} (click to change)` : 'Assign a speaker to this line'}
@@ -115,7 +115,7 @@ function ModeTab({ active, onClick, children }: { active: boolean; onClick: () =
       onClick={onClick}
       className={cn(
         'flex-1 px-3 py-2 transition-colors',
-        active ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-800',
+        active ? 'border-b-2 border-accent text-accent-strong' : 'text-ink-muted hover:text-ink',
       )}
     >
       {children}
@@ -162,9 +162,9 @@ export function NamePanel({
                 onSelect={() => choose({ personId: s.person_id })}
                 title={`Voice match from ${s.meetings} earlier ${s.meetings === 1 ? 'meeting' : 'meetings'} (similarity ${Math.round(s.similarity * 100)}%)`}
               >
-                <Sparkles className="mr-2 h-4 w-4 text-blue-600" />
+                <Sparkles className="mr-2 h-4 w-4 text-accent-strong" />
                 <span className="flex-1 truncate">{s.person_name}</span>
-                <span className={cn('ml-2 text-xs', s.strength === 'likely' ? 'text-green-600' : 'text-amber-600')}>
+                <span className={cn('ml-2 text-xs', s.strength === 'likely' ? 'text-success' : 'text-warning')}>
                   {s.strength === 'likely' ? 'Likely' : 'Possible'}
                 </span>
               </CommandItem>
@@ -181,7 +181,7 @@ export function NamePanel({
                 value={`__similar__${p.name}`}
                 onSelect={() => choose({ personId: p.id })}
               >
-                <User className="mr-2 h-4 w-4 text-gray-500" />
+                <User className="mr-2 h-4 w-4 text-ink-muted" />
                 <span className="truncate">{p.name}</span>
               </CommandItem>
             ))}
@@ -191,7 +191,7 @@ export function NamePanel({
           // The group must be force-mounted too, or cmdk hides it when no person matches the text
           <CommandGroup forceMount>
             <CommandItem forceMount value={`__create__${typed}`} onSelect={() => choose({ newName: typed })}>
-              <UserPlus className="mr-2 h-4 w-4 text-blue-600" />
+              <UserPlus className="mr-2 h-4 w-4 text-accent-strong" />
               <span className="truncate">
                 Add &ldquo;<strong>{typed}</strong>&rdquo;
               </span>
@@ -205,7 +205,7 @@ export function NamePanel({
                 <Check className={cn('mr-2 h-4 w-4', speaker?.person_id === p.id ? 'opacity-100' : 'opacity-0')} />
                 <span className="flex-1 truncate">{p.name}</span>
                 {p.meeting_count > 0 && (
-                  <span className="ml-2 text-xs text-gray-400">
+                  <span className="ml-2 text-xs text-ink-muted">
                     {p.meeting_count} {p.meeting_count === 1 ? 'meeting' : 'meetings'}
                   </span>
                 )}
@@ -218,7 +218,7 @@ export function NamePanel({
             <CommandSeparator />
             <CommandGroup>
               <CommandItem value="__clear__" onSelect={() => choose(null)}>
-                <UserX className="mr-2 h-4 w-4 text-gray-500" />
+                <UserX className="mr-2 h-4 w-4 text-ink-muted" />
                 Clear name ({speakerDisplayName(speakerKey)})
               </CommandItem>
             </CommandGroup>
@@ -264,11 +264,11 @@ function LinePanel({
                 )}
               />
               <span className="flex-1 truncate">{speakerDisplayName(s.speaker_key, s)}</span>
-              <span className="ml-2 text-xs text-gray-400">{s.segment_count}</span>
+              <span className="ml-2 text-xs text-ink-muted">{s.segment_count}</span>
             </CommandItem>
           ))}
           <CommandItem value="__new__" onSelect={moveToNew}>
-            <Plus className="mr-2 h-4 w-4 text-blue-600" />
+            <Plus className="mr-2 h-4 w-4 text-accent-strong" />
             New speaker
           </CommandItem>
         </CommandGroup>
@@ -277,7 +277,7 @@ function LinePanel({
             <CommandSeparator />
             <CommandGroup>
               <CommandItem value="__none__" onSelect={() => moveTo(null)}>
-                <UserX className="mr-2 h-4 w-4 text-gray-500" />
+                <UserX className="mr-2 h-4 w-4 text-ink-muted" />
                 No speaker
               </CommandItem>
             </CommandGroup>

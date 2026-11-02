@@ -49,7 +49,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
     <>
       {parts.map((part, i) =>
         i % 2 === 1 ? (
-          <mark key={i} className="bg-yellow-100 rounded px-0.5">{part}</mark>
+          <mark key={i} className="bg-warning-tint rounded px-0.5">{part}</mark>
         ) : (
           <span key={i}>{part}</span>
         ),
@@ -84,27 +84,27 @@ export function PeopleView() {
   const select = (id: string | null) => router.replace(id ? `/people?id=${encodeURIComponent(id)}` : '/people');
 
   return (
-    <div className="flex h-screen min-w-0 bg-gray-50">
+    <div className="flex h-screen min-w-0 bg-surface">
       {/* People list */}
-      <div className="w-80 flex-shrink-0 border-r border-gray-200 bg-white flex flex-col">
-        <div className="p-4 border-b border-gray-200">
-          <h1 className="text-xl font-semibold text-gray-800 flex items-center">
-            <Users className="w-5 h-5 mr-2 text-gray-500" />
+      <div className="w-80 flex-shrink-0 border-r border-line bg-paper flex flex-col">
+        <div className="p-4 border-b border-line">
+          <h1 className="text-xl font-semibold text-ink flex items-center">
+            <Users className="w-5 h-5 mr-2 text-ink-muted" />
             People
           </h1>
           <div className="relative mt-3">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-ink-muted" />
             <input
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Search by name…"
-              className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-8 pr-3 py-2 text-sm border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {isLoaded && people.length === 0 && (
-            <p className="p-4 text-sm text-gray-500">
+            <p className="p-4 text-sm text-ink-muted">
               {filter.trim()
                 ? 'No one matches that name.'
                 : 'No one here yet. Open a meeting, click a speaker label and give them a name; they will show up here.'}
@@ -115,12 +115,12 @@ export function PeopleView() {
               key={person.id}
               onClick={() => select(person.id)}
               className={cn(
-                'w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors',
-                person.id === selectedId && 'bg-blue-50 hover:bg-blue-50',
+                'w-full text-left px-4 py-3 border-b border-line hover:bg-surface-hover transition-colors',
+                person.id === selectedId && 'bg-accent-tint hover:bg-accent-tint',
               )}
             >
-              <div className="font-medium text-gray-800 truncate">{person.name}</div>
-              <div className="text-xs text-gray-500 mt-0.5">
+              <div className="font-medium text-ink truncate">{person.name}</div>
+              <div className="text-xs text-ink-muted mt-0.5">
                 {person.meeting_count === 0
                   ? 'Not in any meeting yet'
                   : `${plural(person.meeting_count, 'meeting')} · last ${formatDate(person.last_meeting_at)}`}
@@ -141,9 +141,9 @@ export function PeopleView() {
             onSelect={select}
           />
         ) : (
-          <div className="h-full flex flex-col items-center justify-center text-center text-gray-500 px-6">
-            <User className="w-10 h-10 mb-3 text-gray-300" />
-            <p className="font-medium text-gray-600">Select a person</p>
+          <div className="h-full flex flex-col items-center justify-center text-center text-ink-muted px-6">
+            <User className="w-10 h-10 mb-3 text-ink-muted" />
+            <p className="font-medium text-ink-muted">Select a person</p>
             <p className="text-sm mt-1 max-w-sm">
               See every meeting you have had with them, search what they said, and keep notes.
             </p>
@@ -291,10 +291,10 @@ function PersonPanel({
   };
 
   if (loadError) {
-    return <p className="p-6 text-sm text-red-600">{loadError}</p>;
+    return <p className="p-6 text-sm text-danger">{loadError}</p>;
   }
   if (!detail) {
-    return <p className="p-6 text-sm text-gray-500">Loading…</p>;
+    return <p className="p-6 text-sm text-ink-muted">Loading…</p>;
   }
 
   const { person, meetings } = detail;
@@ -317,12 +317,12 @@ function PersonPanel({
                 if (e.key === 'Escape') setIsRenaming(false);
               }}
               aria-label="Person name"
-              className="w-full text-2xl font-semibold text-gray-800 border-b-2 border-blue-500 bg-transparent focus:outline-none"
+              className="w-full text-2xl font-semibold text-ink border-b-2 border-accent bg-transparent focus:outline-none"
             />
           ) : (
-            <h2 className="text-2xl font-semibold text-gray-800 truncate">{person.name}</h2>
+            <h2 className="text-2xl font-semibold text-ink truncate">{person.name}</h2>
           )}
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-ink-muted mt-1">
             {meetings.length === 0
               ? 'Not in any meeting yet'
               : `${plural(meetings.length, 'meeting')} · ${plural(meetings.reduce((n, m) => n + m.line_count, 0), 'line')} spoken`}
@@ -334,7 +334,7 @@ function PersonPanel({
               setNameDraft(person.name);
               setIsRenaming(true);
             }}
-            className="p-2 rounded-md text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+            className="p-2 rounded-md text-ink-muted hover:text-accent-strong hover:bg-accent-tint"
             aria-label="Rename person"
             title="Rename"
           >
@@ -344,7 +344,7 @@ function PersonPanel({
             <PopoverTrigger asChild>
               <button
                 disabled={others.length === 0}
-                className="p-2 rounded-md text-gray-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-500"
+                className="p-2 rounded-md text-ink-muted hover:text-accent-strong hover:bg-accent-tint disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-muted"
                 aria-label="Merge into another person"
                 title={others.length === 0 ? 'Nobody else to merge with' : 'Merge into another person'}
               >
@@ -376,7 +376,7 @@ function PersonPanel({
           </Popover>
           <button
             onClick={() => setConfirm({ kind: 'delete' })}
-            className="p-2 rounded-md text-gray-500 hover:text-red-600 hover:bg-red-50"
+            className="p-2 rounded-md text-ink-muted hover:text-danger hover:bg-danger-tint"
             aria-label="Remove person"
             title="Remove from people"
           >
@@ -386,13 +386,13 @@ function PersonPanel({
       </div>
 
       {/* Notes */}
-      <section className="bg-white border border-gray-200 rounded-lg p-4">
+      <section className="bg-paper border border-line rounded-lg p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-gray-700">Notes</h3>
-          <span className="text-xs text-gray-400 h-4">
+          <h3 className="text-sm font-semibold text-ink">Notes</h3>
+          <span className="text-xs text-ink-muted h-4">
             {notesState === 'saving' && 'Saving…'}
             {notesState === 'saved' && (
-              <span className="inline-flex items-center text-green-600">
+              <span className="inline-flex items-center text-success">
                 <Check className="w-3 h-3 mr-1" />
                 Saved
               </span>
@@ -408,17 +408,17 @@ function PersonPanel({
           onBlur={() => void saveNotes()}
           placeholder="Role, organization, how to reach them, anything worth remembering…"
           aria-label="Notes"
-          className="w-full min-h-[90px] px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+          className="w-full min-h-[90px] px-3 py-2 text-sm border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-accent resize-y"
         />
       </section>
 
       {/* Voice memory */}
-      <section className="bg-white border border-gray-200 rounded-lg p-4">
+      <section className="bg-paper border border-line rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <AudioLines className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
+          <AudioLines className="w-4 h-4 mt-0.5 text-ink-muted flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold text-gray-700">Voice memory</h3>
-            <p className="text-sm text-gray-500 mt-0.5" data-testid="voice-memory-status">
+            <h3 className="text-sm font-semibold text-ink">Voice memory</h3>
+            <p className="text-sm text-ink-muted mt-0.5" data-testid="voice-memory-status">
               {detail.voice_meetings > 0
                 ? `Remembered from ${plural(detail.voice_meetings, 'meeting')}, so ${person.name} can be suggested in future meetings. Stored only on this computer.`
                 : `No voice remembered yet. When you name ${person.name} in a meeting whose speakers were detected automatically, their voice is remembered.`}
@@ -427,7 +427,7 @@ function PersonPanel({
           {detail.voice_meetings > 0 && (
             <button
               onClick={() => setConfirm({ kind: 'forget' })}
-              className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 border border-red-200 rounded-md"
+              className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger-tint border border-danger/40 rounded-md"
             >
               Forget voice
             </button>
@@ -436,10 +436,10 @@ function PersonPanel({
       </section>
 
       {/* Meetings */}
-      <section className="bg-white border border-gray-200 rounded-lg">
-        <h3 className="text-sm font-semibold text-gray-700 px-4 pt-4 pb-2">Meetings</h3>
+      <section className="bg-paper border border-line rounded-lg">
+        <h3 className="text-sm font-semibold text-ink px-4 pt-4 pb-2">Meetings</h3>
         {meetings.length === 0 ? (
-          <p className="px-4 pb-4 text-sm text-gray-500">
+          <p className="px-4 pb-4 text-sm text-ink-muted">
             Open a meeting and click a speaker label to link {person.name} to it.
           </p>
         ) : (
@@ -448,10 +448,10 @@ function PersonPanel({
               <li key={m.meeting_id}>
                 <button
                   onClick={() => openMeeting(m.meeting_id, m.title)}
-                  className="w-full text-left px-4 py-2.5 hover:bg-gray-50 border-t border-gray-100 flex items-baseline gap-3"
+                  className="w-full text-left px-4 py-2.5 hover:bg-surface-hover border-t border-line flex items-baseline gap-3"
                 >
-                  <span className="flex-1 min-w-0 truncate text-sm font-medium text-gray-800">{m.title}</span>
-                  <span className="text-xs text-gray-500 flex-shrink-0">
+                  <span className="flex-1 min-w-0 truncate text-sm font-medium text-ink">{m.title}</span>
+                  <span className="text-xs text-ink-muted flex-shrink-0">
                     {formatDate(m.created_at)} · {plural(m.line_count, 'line')}
                   </span>
                 </button>
@@ -462,21 +462,21 @@ function PersonPanel({
       </section>
 
       {/* What they said */}
-      <section className="bg-white border border-gray-200 rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">What {person.name} said</h3>
+      <section className="bg-paper border border-line rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-ink mb-2">What {person.name} said</h3>
         <div className="relative mb-3">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-ink-muted" />
           <input
             value={lineQuery}
             onChange={(e) => setLineQuery(e.target.value)}
             placeholder="Search their lines across all meetings…"
             aria-label="Search what they said"
-            className="w-full pl-8 pr-8 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-8 pr-8 py-2 text-sm border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
           />
           {lineQuery && (
             <button
               onClick={() => setLineQuery('')}
-              className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
+              className="absolute right-2 top-2 text-ink-muted hover:text-ink-muted"
               aria-label="Clear search"
             >
               <X className="h-4 w-4" />
@@ -484,22 +484,22 @@ function PersonPanel({
           )}
         </div>
         {lines.length === 0 ? (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-ink-muted">
             {debouncedLineQuery.trim() ? 'Nothing matches.' : 'No spoken lines yet.'}
           </p>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-line">
             {lines.map((line) => (
               <li key={line.transcript_id}>
                 <button
                   onClick={() => openMeeting(line.meeting_id, line.meeting_title)}
-                  className="w-full text-left py-2.5 hover:bg-gray-50 rounded"
+                  className="w-full text-left py-2.5 hover:bg-surface-hover rounded"
                 >
-                  <div className="text-xs text-gray-500 mb-0.5">
+                  <div className="text-xs text-ink-muted mb-0.5">
                     {line.meeting_title} · {formatDate(line.meeting_created_at)}
                     {line.audio_start_time != null && ` · [${formatClock(line.audio_start_time)}]`}
                   </div>
-                  <div className="text-sm text-gray-800">
+                  <div className="text-sm text-ink">
                     <Highlight text={line.text} query={debouncedLineQuery} />
                   </div>
                 </button>
@@ -508,7 +508,7 @@ function PersonPanel({
           </ul>
         )}
         {lines.length >= LINE_LIMIT && (
-          <p className="text-xs text-gray-400 mt-2">Showing the first {LINE_LIMIT} matches. Narrow the search to see others.</p>
+          <p className="text-xs text-ink-muted mt-2">Showing the first {LINE_LIMIT} matches. Narrow the search to see others.</p>
         )}
       </section>
 

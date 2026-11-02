@@ -36,9 +36,9 @@ const megabytes = (bytes: number) => (bytes / (1024 * 1024)).toFixed(0);
 
 function ProgressBar({ fraction }: { fraction: number | null }) {
   return (
-    <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden" role="progressbar">
+    <div className="h-2 w-full rounded-full bg-surface overflow-hidden" role="progressbar">
       <div
-        className={`h-full bg-blue-500 transition-all duration-200 ${fraction === null ? 'w-1/3 animate-pulse' : ''}`}
+        className={`h-full bg-accent-strong transition-all duration-200 ${fraction === null ? 'w-1/3 animate-pulse' : ''}`}
         style={fraction === null ? undefined : { width: `${Math.round(fraction * 100)}%` }}
       />
     </div>
@@ -153,31 +153,31 @@ export function DetectSpeakersDialog({
         <div className="py-2 space-y-4">
           <div>
             <h3 className="text-lg font-semibold flex items-center">
-              <Users className="w-5 h-5 mr-2 text-gray-500" />
+              <Users className="w-5 h-5 mr-2 text-ink-muted" />
               Detect speakers
             </h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-ink-muted mt-1">
               Works out who spoke each line by comparing the voices in the recording. It runs on this
               computer and nothing is uploaded.
             </p>
           </div>
 
           {!hasRecording && (
-            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3">
+            <p className="text-sm text-warning bg-warning-tint border border-warning/40 rounded-md p-3">
               This meeting has no saved recording, so there are no voices to analyse.
             </p>
           )}
 
           {hasRecording && model && !modelReady && phase === 'idle' && (
-            <div className="border border-gray-200 rounded-md p-3 space-y-2">
-              <p className="text-sm text-gray-700">
+            <div className="border border-line rounded-md p-3 space-y-2">
+              <p className="text-sm text-ink">
                 First, a one-time download of the voice model ({megabytes(model.size_bytes)} MB). After that,
                 detection works offline.
               </p>
               {isDownloading ? (
                 <>
                   <ProgressBar fraction={download && download.total > 0 ? download.downloaded / download.total : null} />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-ink-muted">
                     {download
                       ? `Downloading… ${megabytes(download.downloaded)} of ${megabytes(download.total)} MB`
                       : 'Starting download…'}
@@ -186,20 +186,20 @@ export function DetectSpeakersDialog({
               ) : (
                 <button
                   onClick={() => void downloadModel()}
-                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-on-accent bg-accent-strong hover:bg-accent-strong-hover rounded-md"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Download voice model
                 </button>
               )}
-              {downloadError && <p className="text-sm text-red-600">{downloadError}</p>}
+              {downloadError && <p className="text-sm text-danger">{downloadError}</p>}
             </div>
           )}
 
           {hasRecording && modelReady && phase !== 'done' && (
             <div className="space-y-3">
               <div>
-                <label htmlFor="speaker-count" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="speaker-count" className="block text-sm font-medium text-ink mb-1">
                   How many people spoke?
                 </label>
                 <select
@@ -207,7 +207,7 @@ export function DetectSpeakersDialog({
                   value={count}
                   disabled={isRunning}
                   onChange={(e) => setCount(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-line-strong rounded-md bg-paper focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <option value="auto">Not sure (estimate it)</option>
                   {COUNT_OPTIONS.map((n) => (
@@ -216,12 +216,12 @@ export function DetectSpeakersDialog({
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-ink-muted mt-1">
                   If you know the number, choose it: that is more accurate than estimating. Similar voices can be
                   mistaken for one person.
                 </p>
               </div>
-              <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+              <label className="flex items-start gap-2 text-sm text-ink cursor-pointer">
                 <input
                   type="checkbox"
                   checked={rememberVoices}
@@ -231,13 +231,13 @@ export function DetectSpeakersDialog({
                 />
                 <span>
                   Remember these voices to suggest names in future meetings
-                  <span className="block text-xs text-gray-500">
+                  <span className="block text-xs text-ink-muted">
                     Kept only on this computer. You can erase anyone&rsquo;s voice from the People page.
                   </span>
                 </span>
               </label>
               {hasSpeakers && (
-                <p className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md p-2">
+                <p className="text-xs text-ink-muted bg-surface border border-line rounded-md p-2">
                   This replaces the current speaker labels. Names you have already given stay with the voices that
                   still match.
                 </p>
@@ -248,7 +248,7 @@ export function DetectSpeakersDialog({
           {isRunning && (
             <div className="space-y-2" aria-live="polite">
               <ProgressBar fraction={analyzeFraction} />
-              <p className="text-sm text-gray-600 flex items-center">
+              <p className="text-sm text-ink-muted flex items-center">
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 {progress?.phase === 'analyzing'
                   ? `Listening to voices… ${progress.done} of ${progress.total} lines`
@@ -260,7 +260,7 @@ export function DetectSpeakersDialog({
           )}
 
           {phase === 'done' && result && (
-            <div className="flex items-start gap-2 text-sm text-green-800 bg-green-50 border border-green-200 rounded-md p-3">
+            <div className="flex items-start gap-2 text-sm text-success bg-success-tint border border-success/40 rounded-md p-3">
               <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <div>
                 Found {result.speakers.length} {result.speakers.length === 1 ? 'speaker' : 'speakers'} across{' '}
@@ -271,9 +271,9 @@ export function DetectSpeakersDialog({
           )}
 
           {phase === 'done' && speakersCtx && speakersCtx.suggestions.some((s) => s.is_best) && (
-            <div className="border border-blue-200 bg-blue-50/50 rounded-md p-3 space-y-2">
-              <p className="text-sm font-medium text-gray-800 flex items-center">
-                <Sparkles className="w-4 h-4 mr-2 text-blue-600" />
+            <div className="border border-accent/40 bg-accent-tint/50 rounded-md p-3 space-y-2">
+              <p className="text-sm font-medium text-ink flex items-center">
+                <Sparkles className="w-4 h-4 mr-2 text-accent-strong" />
                 These voices sound familiar
               </p>
               <ul className="space-y-1">
@@ -284,11 +284,11 @@ export function DetectSpeakersDialog({
                       <span className="flex-1 min-w-0 truncate">
                         {speaker ? `Speaker ${s.speaker_key.slice(1)}` : s.speaker_key} sounds like{' '}
                         <strong>{s.person_name}</strong>{' '}
-                        <span className={s.strength === 'likely' ? 'text-green-600' : 'text-amber-600'}>({s.strength})</span>
+                        <span className={s.strength === 'likely' ? 'text-success' : 'text-warning'}>({s.strength})</span>
                       </span>
                       <button
                         onClick={() => void speakersCtx.acceptSuggestion(s.speaker_key, s.person_id)}
-                        className="flex-shrink-0 px-2 py-0.5 text-xs font-medium text-blue-700 bg-white hover:bg-blue-100 border border-blue-200 rounded"
+                        className="flex-shrink-0 px-2 py-0.5 text-xs font-medium text-accent-strong bg-paper hover:bg-accent-tint border border-accent/40 rounded"
                         aria-label={`Accept ${s.person_name} for Speaker ${s.speaker_key.slice(1)}`}
                       >
                         Accept
@@ -300,7 +300,7 @@ export function DetectSpeakersDialog({
               {speakersCtx.suggestions.filter((s) => s.is_best).length > 1 && (
                 <button
                   onClick={() => void speakersCtx.acceptAllSuggestions()}
-                  className="text-xs font-medium text-blue-700 hover:underline"
+                  className="text-xs font-medium text-accent-strong hover:underline"
                 >
                   Accept all
                 </button>
@@ -309,7 +309,7 @@ export function DetectSpeakersDialog({
           )}
 
           {phase === 'error' && error && (
-            <div className="flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">
+            <div className="flex items-start gap-2 text-sm text-danger bg-danger-tint border border-danger/40 rounded-md p-3">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <div>{error}</div>
             </div>
@@ -319,7 +319,7 @@ export function DetectSpeakersDialog({
           {phase === 'done' ? (
             <button
               onClick={() => onOpenChange(false)}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+              className="px-4 py-2 text-sm font-medium text-on-accent bg-accent-strong hover:bg-accent-strong-hover rounded-md"
             >
               Done
             </button>
@@ -328,14 +328,14 @@ export function DetectSpeakersDialog({
               <button
                 onClick={() => onOpenChange(false)}
                 disabled={isRunning}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-ink bg-surface hover:bg-surface-hover rounded-md disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={() => void detect()}
                 disabled={!hasRecording || !modelReady || isRunning}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium text-on-accent bg-accent-strong hover:bg-accent-strong-hover rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {phase === 'error' ? 'Try again' : 'Detect speakers'}
               </button>
