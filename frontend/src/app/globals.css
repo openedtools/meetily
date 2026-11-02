@@ -122,8 +122,16 @@
     height: 100%;
   }
 
-  h1, h2, h3, h4, h5 {
+  /* Serif for page titles only; section headings are sans for a cleaner, modern feel */
+  h1, h2 {
     font-family: var(--font-serif);
+    letter-spacing: -0.01em;
+  }
+
+  h3, h4, h5 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.005em;
   }
 
   /* Visible focus on every control; no other shadows (spec F-UI-5, F-UI-8) */

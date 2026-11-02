@@ -325,7 +325,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   return (
     <TooltipProvider>
       <div className="flex flex-col space-y-2">
-        <div className="flex items-center space-x-2 bg-paper rounded-full px-4 py-2">
+        <div className="flex items-center space-x-2 bg-paper border border-line rounded-card px-2 py-2">
           {isProcessing && !isParentProcessing ? (
             <div className="flex items-center space-x-2">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-ink"></div>
@@ -337,7 +337,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                 <>
                   <button
                     onClick={handleStartRecording}
-                    className="w-10 h-10 flex items-center justify-center bg-accent-strong rounded-full text-on-accent hover:bg-accent-strong-hover active:bg-accent-strong-pressed transition-colors"
+                    className="w-10 h-10 flex items-center justify-center bg-accent-strong rounded-control text-on-accent hover:bg-accent-strong-hover active:bg-accent-strong-pressed transition-colors"
                   >
                     <Mic size={16} />
                   </button>
@@ -362,7 +362,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                   </div>
 
                   <button
-                    className="w-10 h-10 flex items-center justify-center bg-disabled rounded-full text-on-accent cursor-not-allowed"
+                    className="w-10 h-10 flex items-center justify-center bg-disabled rounded-control text-on-accent cursor-not-allowed"
                     disabled
                   >
                     <Play size={16} />
@@ -380,7 +380,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                           }}
                           disabled={isStarting || isProcessing || isRecordingDisabled || isValidatingModel || isStartingRecording}
                           className={`w-12 h-12 flex items-center justify-center ${isStarting || isProcessing || isValidatingModel || isStartingRecording ? 'bg-disabled' : 'bg-accent-strong hover:bg-accent-strong-hover active:bg-accent-strong-pressed'
-                            } rounded-full text-on-accent transition-colors relative`}
+                            } rounded-control text-on-accent transition-colors relative`}
                         >
                           {isValidatingModel || isStartingRecording ? (
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-paper"></div>
@@ -410,7 +410,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                             className={`w-10 h-10 flex items-center justify-center ${isPausing || isResuming || isStopping
                               ? 'bg-surface-hover border-2 border-line-strong text-ink-muted'
                               : 'bg-paper border-2 border-line-strong text-ink-muted hover:border-line-strong hover:bg-surface-hover'
-                              } rounded-full transition-colors relative`}
+                              } rounded-control transition-colors relative`}
                           >
                             {isPaused ? <Play size={16} /> : <Pause size={16} />}
                             {(isPausing || isResuming) && (
@@ -433,7 +433,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                             }}
                             disabled={isStopping || isPausing || isResuming || isStartingRecording}
                             className={`w-10 h-10 flex items-center justify-center ${isStopping || isPausing || isResuming || isStartingRecording ? 'bg-disabled' : 'bg-danger hover:bg-danger/90'
-                              } rounded-full text-on-accent transition-colors relative`}
+                              } rounded-control text-on-accent transition-colors relative`}
                           >
                             <Square size={16} />
                             {isStopping && (

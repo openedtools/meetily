@@ -1,12 +1,16 @@
-// Generates raster brand assets from the SVG master brand/icon.svg (spec F-UI-9, plan WP7):
-//   brand/generated/icon-1024.png      input for `pnpm tauri icon` (all app icon sizes and the .ico)
-//   brand/generated/preview-<n>.png    the icon at 16, 32, 64 and 256 px, for the AC-UI-6 check
-//   src-tauri/icons/installer/header.bmp   150 x 57, Windows installer header
-//   src-tauri/icons/installer/sidebar.bmp  164 x 314, Windows installer welcome and finish pages
-//   public/icon.svg                     the mark used inside the app
+// Generates raster brand assets from the artwork Ryan supplied in brand/source (spec F-UI-9,
+// plan WP7). The artwork is used as given: only its format and size change.
+//   brand/source/mark.webp       transparent mark: sidebar, About, installer images
+//   brand/source/app-icon.webp   the mark on a tile: app, taskbar, tray and .exe icon
+// Outputs:
+//   brand/generated/app-icon.png        input for `pnpm tauri icon` (all sizes and the .ico)
+//   brand/generated/preview-<n>.png     the app icon at 16, 32, 64 and 256 px (AC-UI-6)
+//   public/mark.png                     the mark inside the app (512 px)
+//   src-tauri/icons/installer/header.bmp    150 x 57, Windows installer header
+//   src-tauri/icons/installer/sidebar.bmp   164 x 314, Windows installer welcome and finish pages
 // Usage: node scripts/brand-assets.mjs   (uses Playwright's Chromium; no network)
 import { chromium } from '@playwright/test';
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,11 +18,10 @@ const FRONTEND = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const BRAND = path.resolve(FRONTEND, '..', 'brand');
 const GENERATED = path.join(BRAND, 'generated');
 const INSTALLER = path.join(FRONTEND, 'src-tauri', 'icons', 'installer');
-const svg = readFileSync(path.join(BRAND, 'icon.svg'), 'utf8');
-const markOnly = svg.replace(/<rect[^>]*\/>/, ''); // the rings and tail without the cream tile
-
+const dataUrl = (file) => `data:image/webp;base64,${readFileSync(path.join(BRAND, 'source', file)).toString('base64')}`;
+const MARK = dataUrl('mark.webp');
+const APP_ICON = dataUrl('app-icon.webp');
 const PAPER = '#FAF6EE';
-const LINE = '#E4DACA';
 
 /** 24-bit bottom-up BMP from RGBA pixels (what NSIS expects). */
 export function encodeBmp(width, height, rgba) {
@@ -48,7 +51,8 @@ export function encodeBmp(width, height, rgba) {
 
 async function render(page, html, width, height) {
   await page.setViewportSize({ width, height });
-  await page.setContent(`<html><body style="margin:0;width:${width}px;height:${height}px;overflow:hidden">${html}</body></html>`);
+  await page.setContent(`<html><body style="margin:0;width:${width}px;height:${height}px;overflow:hidden;background:transparent">${html}</body></html>`);
+  await page.evaluate(() => Promise.all(Array.from(document.images).map((img) => img.decode())));
   return page;
 }
 
@@ -67,7 +71,7 @@ async function pixels(page, width, height) {
   }, { b64: png.toString('base64'), width, height });
 }
 
-const sized = (s, w, h) => s.replace('<svg ', `<svg width="${w}" height="${h}" `);
+const img = (src, size, style = '') => `<img src="${src}" width="${size}" height="${size}" style="display:block;${style}">`;
 
 async function main() {
   mkdirSync(GENERATED, { recursive: true });
@@ -75,28 +79,28 @@ async function main() {
   const browser = await chromium.launch();
   const page = await browser.newPage();
 
-  await render(page, sized(svg, 1024, 1024), 1024, 1024);
-  await page.screenshot({ path: path.join(GENERATED, 'icon-1024.png'), omitBackground: true });
-
+  await render(page, img(APP_ICON, 1024), 1024, 1024);
+  await page.screenshot({ path: path.join(GENERATED, 'app-icon.png'), omitBackground: true });
   for (const n of [16, 32, 64, 256]) {
-    await render(page, sized(svg, n, n), n, n);
+    await render(page, img(APP_ICON, n), n, n);
     await page.screenshot({ path: path.join(GENERATED, `preview-${n}.png`), omitBackground: true });
   }
 
+  await render(page, img(MARK, 512), 512, 512);
+  await page.screenshot({ path: path.join(FRONTEND, 'public', 'mark.png'), omitBackground: true });
+
   // Header: cream with the mark at the right, no text (NSIS draws its own title)
   await render(page, `<div style="width:150px;height:57px;background:${PAPER};position:relative">
-    <div style="position:absolute;right:8px;top:6px">${sized(markOnly, 45, 45)}</div></div>`, 150, 57);
+    <div style="position:absolute;right:6px;top:3px">${img(MARK, 51)}</div></div>`, 150, 57);
   writeFileSync(path.join(INSTALLER, 'header.bmp'), encodeBmp(150, 57, await pixels(page, 150, 57)));
 
-  // Sidebar: cream, one large pale sand circle partly off the edge, the mark near the bottom
-  await render(page, `<div style="width:164px;height:314px;background:${PAPER};position:relative;overflow:hidden">
-    <div style="position:absolute;left:-70px;top:-40px;width:230px;height:230px;border-radius:50%;background:${LINE};opacity:0.55"></div>
-    <div style="position:absolute;left:46px;bottom:34px">${sized(markOnly, 72, 72)}</div></div>`, 164, 314);
+  // Sidebar: cream with the mark in the lower half and generous empty space above
+  await render(page, `<div style="width:164px;height:314px;background:${PAPER};position:relative">
+    <div style="position:absolute;left:22px;bottom:40px">${img(MARK, 120)}</div></div>`, 164, 314);
   writeFileSync(path.join(INSTALLER, 'sidebar.bmp'), encodeBmp(164, 314, await pixels(page, 164, 314)));
 
   await browser.close();
-  copyFileSync(path.join(BRAND, 'icon.svg'), path.join(FRONTEND, 'public', 'icon.svg'));
-  console.log('brand assets written: icon-1024.png, previews, installer header and sidebar, public/icon.svg');
+  console.log('brand assets written: app-icon.png, previews, public/mark.png, installer header and sidebar');
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) await main();

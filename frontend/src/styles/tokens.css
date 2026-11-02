@@ -49,8 +49,8 @@
   --speaker-8: 242 236 217; /* #F2ECD9 ochre */
   --speaker-8-ink: 125 98 18; /* #7D6212 */
 
-  --radius-card: 10px;
-  --radius-control: 8px;
+  --radius-card: 8px;
+  --radius-control: 6px;
   --font-sans: 'Source Sans 3 Variable', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'Source Serif 4 Variable', ui-serif, Georgia, serif;
 

@@ -620,7 +620,7 @@ function ModelCard({
     >
       {/* Recommended Badge */}
       {isRecommended && (
-        <div className="absolute -top-2 -right-2 bg-accent-strong text-on-accent text-xs px-2 py-0.5 rounded-full font-medium">
+        <div className="absolute -top-2 -right-2 bg-accent-strong text-on-accent text-xs px-2 py-0.5 rounded-sm font-medium">
           Recommended
         </div>
       )}
@@ -638,13 +638,13 @@ function ModelCard({
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="bg-accent-strong text-on-accent px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1"
+                  className="bg-accent-strong text-on-accent px-2 py-0.5 rounded-sm text-xs font-medium flex items-center gap-1"
                 >
                   ✓
                 </motion.span>
               )}
               {isQuantizedModel(model.name) && (
-                <span className={`px-2 py-0.5 rounded-full text-xs ${getModelPerformanceBadge(model.name).color === 'green'
+                <span className={`px-2 py-0.5 rounded-sm text-xs ${getModelPerformanceBadge(model.name).color === 'green'
                   ? 'bg-success-tint text-success'
                   : getModelPerformanceBadge(model.name).color === 'orange'
                     ? 'bg-warning-tint text-warning'

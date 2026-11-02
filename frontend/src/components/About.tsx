@@ -28,7 +28,7 @@ export function About() {
         <div className="p-4 space-y-6 h-[80vh] overflow-y-auto">
             <div className="text-center space-y-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icon.svg" alt="" width={64} height={64} className="mx-auto" />
+                <img src="/mark.png" alt="" width={72} height={72} className="mx-auto" />
                 <h2 className="font-serif text-3xl text-ink">{BRAND.name}</h2>
                 {currentVersion && <p className="text-sm text-ink-muted">Version {currentVersion}</p>}
                 <p className="text-base text-ink">{BRAND.tagline}</p>

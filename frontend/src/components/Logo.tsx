@@ -18,22 +18,22 @@ const Logo = React.forwardRef<HTMLButtonElement, LogoProps>(
             <button
               ref={ref}
               type="button"
-              className="flex items-center justify-center mb-2 rounded-control p-1 hover:bg-surface-hover transition-colors"
+              className="flex items-center justify-center rounded-control p-1 hover:bg-surface-hover transition-colors"
               aria-label={`About ${BRAND.name}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/icon.svg" alt="" width={36} height={36} />
+              <img src="/mark.png" alt="" width={36} height={36} />
             </button>
           ) : (
             <button
               ref={ref}
               type="button"
-              className="w-full flex items-center gap-2 mb-2 rounded-control px-2 py-1 hover:bg-surface-hover transition-colors"
+              className="flex items-center gap-1.5 rounded-control px-1 py-0.5 -ml-1 hover:bg-surface-hover transition-colors"
               aria-label={`About ${BRAND.name}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/icon.svg" alt="" width={28} height={28} />
-              <span className="font-serif text-2xl text-ink">{BRAND.name}</span>
+              <img src="/mark.png" alt="" width={30} height={30} />
+              <span className="font-serif text-xl text-ink">{BRAND.name}</span>
             </button>
           )}
         </DialogTrigger>

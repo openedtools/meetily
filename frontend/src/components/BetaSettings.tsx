@@ -41,7 +41,7 @@ export function BetaSettings() {
                 <h3 className="text-lg font-semibold text-ink">
                   {BETA_FEATURE_NAMES[featureKey]}
                 </h3>
-                <span className="px-2 py-0.5 text-xs font-medium bg-warning-tint text-warning rounded-full">
+                <span className="px-2 py-0.5 text-xs font-medium bg-warning-tint text-warning rounded-sm">
                   BETA
                 </span>
               </div>

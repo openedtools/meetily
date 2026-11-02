@@ -130,7 +130,7 @@ export function SpeakersMenu({ meetingId, meetingFolderPath, onRefetchTranscript
                                   <button
                                     key={o.speaker_key}
                                     onClick={() => setPending({ kind: 'merge', from: s.speaker_key, into: o.speaker_key })}
-                                    className={cn('text-xs px-2 py-0.5 rounded-full border hover:brightness-95', speakerColorClasses(o.speaker_key))}
+                                    className={cn('text-xs px-2 py-0.5 rounded-control border hover:brightness-95', speakerColorClasses(o.speaker_key))}
                                     aria-label={`Merge into ${nameOf(o.speaker_key)}`}
                                   >
                                     {nameOf(o.speaker_key)}

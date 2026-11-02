@@ -55,7 +55,7 @@ export function OnboardingContainer({
                   onClick={handlePrevious}
                   disabled={!canGoPrevious || step === 1}
                   className={cn(
-                    'pointer-events-auto w-8 h-8 rounded-full bg-paper border border-line flex items-center justify-center transition-all duration-200',
+                    'pointer-events-auto w-8 h-8 rounded-control bg-paper border border-line flex items-center justify-center transition-all duration-200',
                     canGoPrevious && step !== 1
                       ? 'hover:bg-surface-hover hover:scale-110 text-ink'
                       : 'opacity-0 cursor-not-allowed'
@@ -68,7 +68,7 @@ export function OnboardingContainer({
                   onClick={handleNext}
                   disabled={!canGoNext || step === totalSteps}
                   className={cn(
-                    'pointer-events-auto w-8 h-8 rounded-full bg-paper border border-line flex items-center justify-center transition-all duration-200',
+                    'pointer-events-auto w-8 h-8 rounded-control bg-paper border border-line flex items-center justify-center transition-all duration-200',
                     canGoNext && step !== totalSteps
                       ? 'hover:bg-surface-hover hover:scale-110 text-ink'
                       : 'opacity-0 cursor-not-allowed'

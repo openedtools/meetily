@@ -215,6 +215,8 @@ AC-ID-1 to AC-ID-6, AC-UI-1 to AC-UI-8 (AC-UI-9 only if the illustration is supp
 | WP6 | Not in the plan | Tailwind now scans `src/lib`, `src/hooks` and `src/contexts`; BlockNote overrides moved outside `@layer base` | Speaker colours had never been generated, and Tailwind silently dropped layered rules for classes it never saw |
 | WP6 | Not in the plan | Keyboard fixes: focus ring on the summary editor, 24 px speaker chips, switches and resize handle, hover-only buttons visible on focus, an accessible name on the sidebar toggle | Found by the keyboard check (AC-UI-4) |
 | WP7 | Installer images until Ryan supplies generated art | Plain on-brand BMPs rendered from the icon SVG by `scripts/brand-assets.mjs` with Playwright's Chromium | No image library on the build machine |
+| A3 review | Icon redrawn as an SVG master (spec 3.2, F-UI-9) | Ryan supplied the final artwork on 2026-11-01: a transparent mark (`brand/source/mark.webp`) for the app and installer images, and a tiled version (`brand/source/app-icon.webp`) for the .exe, taskbar and tray. Used as given; `scripts/brand-assets.mjs` only resizes and converts | Ryan's choice. The SVG concept is retired |
+| A3 review | Serif for all headings, 10 px cards, 8 px controls | Serif for page titles (h1, h2) only, sans for section headings; 8 px cards, 6 px controls; no pill-shaped buttons or badges; sidebar with a header collapse button, one primary New recording button and compact navigation rows | Ryan asked for a more modern look, not anchored to the upstream layout |
 
 Feedback from the A1 and A2 Windows tests, to place when those phases are planned:
 

@@ -96,7 +96,7 @@ export function ChunkProgressDisplay({
             Processing Progress
           </h3>
           {isPaused && (
-            <span className="bg-warning-tint text-warning px-2 py-1 rounded-full text-xs font-medium">
+            <span className="bg-warning-tint text-warning px-2 py-1 rounded-sm text-xs font-medium">
               Paused
             </span>
           )}

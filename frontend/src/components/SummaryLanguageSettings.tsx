@@ -72,7 +72,7 @@ export function SummaryLanguageSettings() {
             <button
               type="button"
               disabled={recents.length >= 5}
-              className="inline-flex items-center gap-1 rounded-full border border-dashed border-line-strong px-3 py-1 text-sm text-ink-muted hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-control border border-dashed border-line-strong px-3 py-1 text-sm text-ink-muted hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
             >
               ＋ Add language
             </button>

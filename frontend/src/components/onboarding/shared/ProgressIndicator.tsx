@@ -34,10 +34,10 @@ export function ProgressIndicator({ current, total, onStepClick }: ProgressIndic
                 disabled={!isClickable}
                 className={`relative flex items-center justify-center transition-all duration-300 ${
                   isCompleted
-                    ? 'w-7 h-7 bg-success rounded-full'
+                    ? 'w-7 h-7 bg-success rounded-control'
                     : isActive
-                      ? 'w-8 h-8 bg-accent rounded-full'
-                      : 'w-6 h-6 bg-line rounded-full'
+                      ? 'w-8 h-8 bg-accent rounded-control'
+                      : 'w-6 h-6 bg-line rounded-control'
                 } ${isClickable ? 'cursor-pointer hover:scale-110 ' : 'cursor-default'}`}
               >
                 {isCompleted ? (
