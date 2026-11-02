@@ -35,6 +35,7 @@ module.exports = {
   			sage: { DEFAULT: token('sage'), tint: token('sage-tint') },
   			disabled: token('disabled'),
   			scrim: 'rgb(var(--scrim) / var(--scrim-alpha))',
+  			speaker: Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8].flatMap((n) => [[n, token(`speaker-${n}`)], [`${n}-ink`, token(`speaker-${n}-ink`)]])),
 
   			// shadcn names, aliased to the tokens in globals.css
   			background: token('background'),

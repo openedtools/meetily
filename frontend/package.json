@@ -27,6 +27,7 @@
         "tauri:build:hipblas": "tauri build -- --features hipblas",
         "typecheck": "tsc --noEmit",
         "test": "bun test --isolate && node --test tests/lib/onboarding-summary-model.test.mjs",
+        "test:ui": "playwright test",
         "lint": "node scripts/lint/run.mjs",
         "lint:dashes": "node scripts/lint/dashes.mjs",
         "lint:brand": "node scripts/lint/brand.mjs",
@@ -104,6 +105,7 @@
         }
     },
     "devDependencies": {
+        "@playwright/test": "1.60.0",
         "@tailwindcss/container-queries": "^0.1.1",
         "@tailwindcss/typography": "^0.5.15",
         "@tauri-apps/cli": "^2.1.0",
