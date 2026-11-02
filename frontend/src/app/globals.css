@@ -77,8 +77,11 @@
 }
 
 @layer base {
-  /* shadcn variables are aliases of the design tokens in src/styles/tokens.css */
-  :root {
+  /* shadcn variables are aliases of the design tokens in src/styles/tokens.css.
+     html:root and html.dark outrank the plain :root and .dark blocks that
+     @blocknote/shadcn ships with its own (HSL) values. */
+  html:root,
+  html.dark {
     --background: var(--paper);
     --foreground: var(--ink);
     --card: var(--paper);
@@ -172,36 +175,77 @@
     scrollbar-width: thin;
     scrollbar-color: rgb(var(--line)) transparent;
   }
+}
 
-  /* BlockNote Editor - Override fixed dimensions for responsive layout */
-  .bn-container {
-    width: 100% !important;
-    max-width: none !important;
-    overflow: visible !important;
-  }
+/* BlockNote rules live outside @layer base: Tailwind drops layered rules whose class
+   names never appear in our source files, and BlockNote adds these classes at runtime. */
+/* BlockNote's precompiled CSS reads hsl(var(--x)) and puts its own .dark class on the
+   editor container, so the editor gets the HSL copies of the tokens here. */
+html .bn-container.bn-shadcn {
+  --background: var(--hsl-paper);
+  --foreground: var(--hsl-ink);
+  --card: var(--hsl-paper);
+  --card-foreground: var(--hsl-ink);
+  --popover: var(--hsl-paper);
+  --popover-foreground: var(--hsl-ink);
+  --primary: var(--hsl-accent-strong);
+  --primary-foreground: var(--hsl-on-accent);
+  --secondary: var(--hsl-surface);
+  --secondary-foreground: var(--hsl-ink);
+  --muted: var(--hsl-surface);
+  --muted-foreground: var(--hsl-ink-muted);
+  --accent: var(--hsl-surface-hover);
+  --accent-foreground: var(--hsl-ink);
+  --destructive: var(--hsl-danger);
+  --destructive-foreground: var(--hsl-on-accent);
+  --border: var(--hsl-line);
+  --input: var(--hsl-line-strong);
+  --ring: var(--hsl-accent);
+  --bn-colors-editor-text: rgb(var(--ink));
+  --bn-colors-editor-background: rgb(var(--paper));
+  --bn-colors-menu-text: rgb(var(--ink));
+  --bn-colors-menu-background: rgb(var(--paper));
+  --bn-colors-tooltip-text: rgb(var(--ink));
+  --bn-colors-tooltip-background: rgb(var(--surface));
+  --bn-colors-hovered-text: rgb(var(--ink));
+  --bn-colors-hovered-background: rgb(var(--surface-hover));
+  --bn-colors-selected-text: rgb(var(--on-accent));
+  --bn-colors-selected-background: rgb(var(--accent-strong));
+  --bn-colors-disabled-text: rgb(var(--disabled));
+  --bn-colors-disabled-background: rgb(var(--surface));
+  --bn-colors-shadow: transparent;
+  --bn-colors-border: rgb(var(--line));
+  --bn-colors-side-menu: rgb(var(--ink-muted));
+}
 
-  .bn-editor {
-    width: 100% !important;
-    max-width: none !important;
-    overflow: visible !important;
-  }
+/* BlockNote Editor - Override fixed dimensions for responsive layout */
+.bn-container {
+  width: 100% !important;
+  max-width: none !important;
+  overflow: visible !important;
+}
 
-  /* Disable internal scrolling - let parent handle all scrolling */
-  .ProseMirror {
-    overflow: visible !important;
-  }
+.bn-editor {
+  width: 100% !important;
+  max-width: none !important;
+  overflow: visible !important;
+}
 
-  /* Ensure BlockNote content area is responsive */
-  .bn-block-outer {
-    max-width: 100% !important;
-  }
+/* Disable internal scrolling - let parent handle all scrolling */
+.ProseMirror {
+  overflow: visible !important;
+}
 
-  .bn-default-styles {
-    max-width: none !important;
-  }
+/* Ensure BlockNote content area is responsive */
+.bn-block-outer {
+  max-width: 100% !important;
+}
 
-  /* Disable scrolling on any BlockNote wrapper elements */
-  [data-node-type] {
-    overflow: visible !important;
-  }
+.bn-default-styles {
+  max-width: none !important;
+}
+
+/* Disable scrolling on any BlockNote wrapper elements */
+[data-node-type] {
+  overflow: visible !important;
 }

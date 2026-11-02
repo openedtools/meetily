@@ -457,7 +457,7 @@ const Sidebar: React.FC = () => {
               <button
                 onClick={handleRecordingToggle}
                 disabled={isRecording}
-                className={`p-2 ${isRecording ? 'bg-danger cursor-not-allowed' : 'bg-danger hover:bg-danger/90'} rounded-full transition-colors duration-150 `}
+                className={`p-2 ${isRecording ? 'bg-danger cursor-not-allowed' : 'bg-accent-strong hover:bg-accent-strong-hover active:bg-accent-strong-pressed'} rounded-full transition-colors duration-150 `}
               >
                 {isRecording ? (
                   <Square className="w-5 h-5 text-on-accent" />
@@ -691,6 +691,8 @@ const Sidebar: React.FC = () => {
       {/* Floating collapse button */}
       <button
         onClick={toggleCollapse}
+        aria-label={isCollapsed ? 'Show meeting list' : 'Hide meeting list'}
+        aria-expanded={!isCollapsed}
         className="absolute -right-6 top-20 z-50 p-1 bg-paper hover:bg-surface-hover rounded-full border"
         style={{ transform: 'translateX(50%)' }}
       >
@@ -820,7 +822,7 @@ const Sidebar: React.FC = () => {
             <button
               onClick={handleRecordingToggle}
               disabled={isRecording}
-              className={`w-full flex items-center justify-center px-3 py-2 text-sm font-medium text-on-accent ${isRecording ? 'bg-danger-tint cursor-not-allowed' : 'bg-danger hover:bg-danger/90'} rounded-lg transition-colors `}
+              className={`w-full flex items-center justify-center px-3 py-2 text-sm font-medium ${isRecording ? 'bg-danger-tint text-danger cursor-not-allowed' : 'bg-accent-strong text-on-accent hover:bg-accent-strong-hover active:bg-accent-strong-pressed'} rounded-lg transition-colors `}
             >
               {isRecording ? (
                 <>

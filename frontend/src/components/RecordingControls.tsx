@@ -337,7 +337,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                 <>
                   <button
                     onClick={handleStartRecording}
-                    className="w-10 h-10 flex items-center justify-center bg-danger rounded-full text-on-accent hover:bg-danger/90 transition-colors"
+                    className="w-10 h-10 flex items-center justify-center bg-accent-strong rounded-full text-on-accent hover:bg-accent-strong-hover active:bg-accent-strong-pressed transition-colors"
                   >
                     <Mic size={16} />
                   </button>
@@ -362,7 +362,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                   </div>
 
                   <button
-                    className="w-10 h-10 flex items-center justify-center bg-line rounded-full text-on-accent cursor-not-allowed"
+                    className="w-10 h-10 flex items-center justify-center bg-disabled rounded-full text-on-accent cursor-not-allowed"
                     disabled
                   >
                     <Play size={16} />
@@ -379,7 +379,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                             handleStartRecording();
                           }}
                           disabled={isStarting || isProcessing || isRecordingDisabled || isValidatingModel || isStartingRecording}
-                          className={`w-12 h-12 flex items-center justify-center ${isStarting || isProcessing || isValidatingModel || isStartingRecording ? 'bg-line-strong' : 'bg-danger hover:bg-danger/90'
+                          className={`w-12 h-12 flex items-center justify-center ${isStarting || isProcessing || isValidatingModel || isStartingRecording ? 'bg-disabled' : 'bg-accent-strong hover:bg-accent-strong-hover active:bg-accent-strong-pressed'
                             } rounded-full text-on-accent transition-colors relative`}
                         >
                           {isValidatingModel || isStartingRecording ? (
@@ -432,7 +432,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                               handleStopRecording();
                             }}
                             disabled={isStopping || isPausing || isResuming || isStartingRecording}
-                            className={`w-10 h-10 flex items-center justify-center ${isStopping || isPausing || isResuming || isStartingRecording ? 'bg-line-strong' : 'bg-danger hover:bg-danger/90'
+                            className={`w-10 h-10 flex items-center justify-center ${isStopping || isPausing || isResuming || isStartingRecording ? 'bg-disabled' : 'bg-danger hover:bg-danger/90'
                               } rounded-full text-on-accent transition-colors relative`}
                           >
                             <Square size={16} />

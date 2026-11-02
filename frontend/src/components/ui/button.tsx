@@ -5,22 +5,22 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground hover:bg-primary/90",
+          "bg-accent-strong text-on-accent hover:bg-accent-strong-hover active:bg-accent-strong-pressed",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
           "border border-input bg-background hover:bg-surface-hover hover:text-ink",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-surface text-ink hover:bg-surface-hover",
         ghost: "hover:bg-surface-hover hover:text-ink",
         link: "text-primary underline-offset-4 hover:underline",
         green: "bg-success text-on-accent hover:bg-success/90",
-        blue: "bg-accent-strong text-on-accent hover:bg-accent-strong",
+        blue: "bg-accent-strong text-on-accent hover:bg-accent-strong-hover active:bg-accent-strong-pressed",
         red: "bg-danger text-on-accent hover:bg-danger/90",
         gray: "border bg-surface border-input hover:bg-surface-hover hover:text-ink",
       },

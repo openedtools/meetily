@@ -86,7 +86,7 @@ export function SummaryGeneratorButtonGroup({
         <Button
           variant="outline"
           size="sm"
-          className="bg-gradient-to-r from-danger-tint to-warning-tint hover:from-danger-tint hover:to-warning-tint border-danger/40 px-3 gap-2"
+          className="bg-danger-tint text-danger hover:bg-surface-hover border-danger/40 px-3 gap-2"
           onClick={() => {
             onStopGeneration();
           }}
@@ -99,7 +99,7 @@ export function SummaryGeneratorButtonGroup({
         <Button
           variant="outline"
           size="sm"
-          className="bg-gradient-to-r from-accent-tint to-accent-tint hover:from-accent-tint hover:to-accent-tint border-accent/40 px-3 gap-2"
+          className="bg-accent-tint text-ink hover:bg-surface-hover border-accent/40 px-3 gap-2"
           onClick={() => {
             void onGenerateSummary(customPrompt);
           }}

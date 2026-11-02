@@ -53,6 +53,19 @@
   --radius-control: 8px;
   --font-sans: 'Source Sans 3 Variable', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'Source Serif 4 Variable', ui-serif, Georgia, serif;
+
+  /* HSL copies for @blocknote/shadcn, whose precompiled CSS reads hsl(var(--x)). Generated from the values above; not checked by the contrast lint. */
+  --hsl-paper: 40.0 54.5% 95.7%;
+  --hsl-surface: 40.0 44.7% 90.8%;
+  --hsl-surface-hover: 39.1 40.4% 88.8%;
+  --hsl-line: 36.9 32.5% 84.3%;
+  --hsl-line-strong: 34.3 11.4% 48.2%;
+  --hsl-ink: 26.7 11.7% 15.1%;
+  --hsl-ink-muted: 32.7 11.5% 37.6%;
+  --hsl-accent: 15.8 53.0% 50.8%;
+  --hsl-accent-strong: 16.7 59.4% 41.6%;
+  --hsl-on-accent: 40.0 54.5% 95.7%;
+  --hsl-danger: 5.7 67.2% 37.1%;
 }
 
 .dark {
@@ -96,4 +109,15 @@
   --speaker-7-ink: 186 180 120; /* #BAB478 */
   --speaker-8: 64 57 38; /* #403926 ochre */
   --speaker-8-ink: 214 184 92; /* #D6B85C */
+  --hsl-paper: 30.0 14.8% 10.6%;
+  --hsl-surface: 30.0 13.5% 14.5%;
+  --hsl-surface-hover: 32.3 14.0% 18.2%;
+  --hsl-line: 32.0 14.9% 19.8%;
+  --hsl-line-strong: 34.6 10.8% 47.1%;
+  --hsl-ink: 37.9 37.3% 90.0%;
+  --hsl-ink-muted: 34.6 13.0% 60.8%;
+  --hsl-accent: 17.7 66.3% 63.9%;
+  --hsl-accent-strong: 17.7 66.3% 63.9%;
+  --hsl-on-accent: 30.0 14.8% 10.6%;
+  --hsl-danger: 8.1 79.7% 71.0%;
 }

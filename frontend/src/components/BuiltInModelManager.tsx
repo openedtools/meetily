@@ -305,7 +305,7 @@ export function BuiltInModelManager({
                   ? 'bg-paper border-line'
                   : 'bg-card',
                 selectedModel === model.name
-                  ? 'ring-2 ring-line-strong border-ink'
+                  ? 'ring-2 ring-accent border-accent'
                   : 'border-line hover:border-line-strong',
                 isAvailable && !modelIsDownloading && 'cursor-pointer'
               )}
@@ -477,7 +477,7 @@ export function BuiltInModelManager({
                   </div>
                   <div className="w-full h-2.5 bg-surface-hover rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-ink to-ink rounded-full transition-all duration-300"
+                      className="h-full bg-accent rounded-full transition-all duration-300"
                       style={{ width: `${progress}%` }}
                     />
                   </div>

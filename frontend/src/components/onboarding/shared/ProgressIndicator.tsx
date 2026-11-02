@@ -36,7 +36,7 @@ export function ProgressIndicator({ current, total, onStepClick }: ProgressIndic
                   isCompleted
                     ? 'w-7 h-7 bg-success rounded-full'
                     : isActive
-                      ? 'w-8 h-8 bg-ink rounded-full'
+                      ? 'w-8 h-8 bg-accent rounded-full'
                       : 'w-6 h-6 bg-line rounded-full'
                 } ${isClickable ? 'cursor-pointer hover:scale-110 ' : 'cursor-default'}`}
               >

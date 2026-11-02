@@ -93,7 +93,7 @@ export function SetupOverviewStep() {
         <div className="w-full max-w-xs space-y-4">
           <Button
             onClick={handleContinue}
-            className="w-full h-11 bg-ink hover:bg-ink text-on-accent"
+            className="w-full h-11 bg-accent-strong hover:bg-accent-strong-hover active:bg-accent-strong-pressed text-on-accent"
           >
             Let's Go
           </Button>

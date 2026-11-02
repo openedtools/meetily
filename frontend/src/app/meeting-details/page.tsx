@@ -253,7 +253,7 @@ function MeetingDetailsContent() {
           <p className="text-danger mb-4">{error}</p>
           <button
             onClick={() => router.push('/')}
-            className="px-4 py-2 bg-accent-strong text-on-accent rounded hover:bg-accent-strong"
+            className="px-4 py-2 bg-accent-strong text-on-accent rounded hover:bg-accent-strong-hover"
           >
             Go Back
           </button>

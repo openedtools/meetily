@@ -11,6 +11,14 @@ async function open(page: Page, url: string) {
   await page.waitForTimeout(800);
 }
 
+async function showSidebar(page: Page) {
+  const toggle = page.getByRole('button', { name: 'Show meeting list' });
+  if (await toggle.count()) {
+    await toggle.click();
+    await page.waitForTimeout(400);
+  }
+}
+
 async function shot(page: Page, name: string) {
   const theme = test.info().project.name;
   await page.screenshot({ path: path.join(OUT, `${name}-${theme}.png`) });
@@ -19,6 +27,8 @@ async function shot(page: Page, name: string) {
 test('record screen', async ({ page }) => {
   await open(page, '/');
   await shot(page, '01-record');
+  await showSidebar(page);
+  await shot(page, '01-record-sidebar');
 });
 
 test('meeting: transcript and summary', async ({ page }) => {
@@ -60,9 +70,9 @@ test('onboarding', async ({ page }) => {
 
 test('dialog: delete meeting', async ({ page }) => {
   await open(page, '/');
-  const item = page.getByText('Course design sync').first();
-  await item.hover();
-  const del = page.getByRole('button', { name: /delete/i }).first();
+  await showSidebar(page);
+  await page.getByText('Course design sync').first().hover();
+  const del = page.getByRole('button', { name: 'Delete meeting' }).first();
   if (await del.isVisible()) {
     await del.click();
     await page.waitForTimeout(400);

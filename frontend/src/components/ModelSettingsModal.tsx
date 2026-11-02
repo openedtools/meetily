@@ -1284,7 +1284,7 @@ export function ModelSettingsModal({
                             </div>
                             <div className="w-full h-2 bg-surface-hover rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-gradient-to-r from-accent-strong to-accent-strong rounded-full transition-all duration-300"
+                                className="h-full bg-accent rounded-full transition-all duration-300"
                                 style={{ width: `${getProgress('gemma3:1b')}%` }}
                               />
                             </div>
@@ -1340,7 +1340,7 @@ export function ModelSettingsModal({
                               </div>
                               <div className="w-full h-2 bg-surface-hover rounded-full overflow-hidden">
                                 <div
-                                  className="h-full bg-gradient-to-r from-accent-strong to-accent-strong rounded-full transition-all duration-300"
+                                  className="h-full bg-accent rounded-full transition-all duration-300"
                                   style={{ width: `${progress}%` }}
                                 />
                               </div>
@@ -1393,7 +1393,7 @@ export function ModelSettingsModal({
         <Button
           className={cn(
             'px-4 text-sm font-medium text-on-accent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent',
-            isDoneDisabled ? 'bg-line-strong cursor-not-allowed' : 'bg-accent-strong hover:bg-accent-strong-hover'
+            isDoneDisabled ? 'bg-disabled cursor-not-allowed' : 'bg-accent-strong hover:bg-accent-strong-hover'
           )}
           onClick={handleSave}
           disabled={isDoneDisabled}

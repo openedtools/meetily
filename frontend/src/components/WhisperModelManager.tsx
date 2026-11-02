@@ -788,7 +788,7 @@ function ModelCard({
             </div>
             <div className="w-full h-2 bg-surface-hover rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-accent-strong to-accent-strong rounded-full"
+                className="h-full bg-accent rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${downloadProgress}%` }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}

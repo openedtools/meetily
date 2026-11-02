@@ -79,7 +79,7 @@ export function TranscriptButtonGroup({
           <Button
             size="sm"
             variant="outline"
-            className="bg-gradient-to-r from-accent-tint to-accent-tint hover:from-accent-tint hover:to-accent-tint border-accent/40 px-2 @[22rem]:px-4"
+            className="bg-accent-tint text-ink hover:bg-surface-hover border-accent/40 px-2 @[22rem]:px-4"
             onClick={() => {
               setShowRetranscribeDialog(true);
             }}
