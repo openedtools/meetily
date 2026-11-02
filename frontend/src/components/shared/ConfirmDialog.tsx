@@ -24,20 +24,20 @@ export function ConfirmDialog({ title, body, confirmLabel, destructive, onConfir
         </VisuallyHidden>
         <div className="py-4">
           <h3 className="text-lg font-semibold mb-3">{title}</h3>
-          <p className="text-sm text-gray-600">{body}</p>
+          <p className="text-sm text-ink-muted">{body}</p>
         </div>
         <DialogFooter>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            className="px-4 py-2 text-sm font-medium text-ink bg-surface hover:bg-surface-hover rounded-md transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             className={cn(
-              'px-4 py-2 text-sm font-medium text-white rounded-md transition-colors',
-              destructive ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700',
+              'px-4 py-2 text-sm font-medium text-on-accent rounded-md transition-colors',
+              destructive ? 'bg-danger hover:bg-danger/90' : 'bg-accent-strong hover:bg-accent-strong-hover',
             )}
           >
             {confirmLabel}

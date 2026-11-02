@@ -135,14 +135,14 @@ export function LegacyDatabaseImport({ isOpen, onComplete }: LegacyDatabaseImpor
 
           {/* Browse Section */}
           <div className="space-y-3">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-ink-muted">
               Select your previous Meetily folder, backend directory, or database file:
             </p>
 
             <button
               onClick={handleBrowse}
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-accent-strong text-on-accent rounded-lg hover:bg-accent-strong-hover disabled:bg-line-strong disabled:cursor-not-allowed transition-colors"
             >
               {importState === 'selecting' || importState === 'detecting' ? (
                 <>
@@ -160,12 +160,12 @@ export function LegacyDatabaseImport({ isOpen, onComplete }: LegacyDatabaseImpor
 
           {/* Detection Result */}
           {detectedPath && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="p-3 bg-success-tint border border-success/40 rounded-lg">
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <CheckCircle2 className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-green-800">Database found!</p>
-                  <p className="text-xs text-green-700 mt-1 break-all">{detectedPath}</p>
+                  <p className="text-sm font-medium text-success">Database found!</p>
+                  <p className="text-xs text-success mt-1 break-all">{detectedPath}</p>
                 </div>
               </div>
             </div>
@@ -173,11 +173,11 @@ export function LegacyDatabaseImport({ isOpen, onComplete }: LegacyDatabaseImpor
 
           {/* Error Message */}
           {importState === 'error' && errorMessage && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="p-3 bg-danger-tint border border-danger/40 rounded-lg">
               <div className="flex items-start gap-2">
-                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <XCircle className="h-5 w-5 text-danger mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="text-sm text-red-800">{errorMessage}</p>
+                  <p className="text-sm text-danger">{errorMessage}</p>
                 </div>
               </div>
             </div>
@@ -188,7 +188,7 @@ export function LegacyDatabaseImport({ isOpen, onComplete }: LegacyDatabaseImpor
             <button
               onClick={handleImport}
               disabled={!canImport || isLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-success text-on-accent rounded-lg hover:bg-success/90 disabled:bg-line disabled:cursor-not-allowed transition-colors"
             >
               {importState === 'importing' ? (
                 <>
@@ -210,17 +210,17 @@ export function LegacyDatabaseImport({ isOpen, onComplete }: LegacyDatabaseImpor
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
+                <div className="w-full border-t border-line-strong"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">or</span>
+                <span className="px-2 bg-paper text-ink-muted">or</span>
               </div>
             </div>
 
             <button
               onClick={handleStartFresh}
               disabled={isLoading}
-              className="w-full px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+              className="w-full px-4 py-3 border-2 border-line-strong text-ink rounded-lg hover:bg-surface-hover disabled:bg-surface disabled:cursor-not-allowed transition-colors"
             >
               Start Fresh (No Import)
             </button>
