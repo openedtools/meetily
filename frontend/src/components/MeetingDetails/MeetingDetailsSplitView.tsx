@@ -156,7 +156,7 @@ export function MeetingDetailsSplitView({
           aria-valuetext={`Transcript panel ${Math.round(ratio * 100)} percent`}
           aria-label="Resize transcript and summary"
           tabIndex={0}
-          className="group relative z-10 hidden w-2 flex-shrink-0 cursor-col-resize items-stretch justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset md:flex"
+          className="group relative z-10 -mx-2 hidden w-6 flex-shrink-0 cursor-col-resize items-stretch justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset md:flex"
           onPointerDown={onPointerDown}
           onKeyDown={onSeparatorKeyDown}
         >

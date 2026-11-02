@@ -60,7 +60,7 @@ export const SpeakerChip = memo(function SpeakerChip({ transcriptId, speakerKey,
       <button
         type="button"
         className={cn(
-          'mb-1 inline-flex max-w-full items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+          'mb-1 inline-flex min-h-6 max-w-full items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',
           'transition-colors hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
           speakerColorClasses(speakerKey),
         )}

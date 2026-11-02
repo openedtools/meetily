@@ -218,6 +218,13 @@ html .bn-container.bn-shadcn {
   --bn-colors-side-menu: rgb(var(--ink-muted));
 }
 
+/* BlockNote turns the outline off; the editing area needs a visible focus indicator too */
+html .bn-container .bn-editor:focus-visible {
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 4px;
+  border-radius: var(--radius-control);
+}
+
 /* BlockNote Editor - Override fixed dimensions for responsive layout */
 .bn-container {
   width: 100% !important;
