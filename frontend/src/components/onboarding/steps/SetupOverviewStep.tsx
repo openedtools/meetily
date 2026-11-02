@@ -53,7 +53,7 @@ export function SetupOverviewStep() {
     >
       <div className="flex flex-col items-center space-y-10">
         {/* Steps Card */}
-        <div className="w-full max-w-md bg-white rounded-lg border border-gray-200 p-4">
+        <div className="w-full max-w-md bg-paper rounded-lg border border-line p-4">
           <div className="space-y-4">
             {steps.map((step, idx) => {
               return (
@@ -62,14 +62,14 @@ export function SetupOverviewStep() {
                   className={`flex items-start gap-4 p-1`}
                 >
                   <div className="flex-1 ml-1">
-                    <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                    <h3 className="font-medium text-ink flex items-center gap-2">
                         Step {step.number} :  {step.title}
 
                         {step.type === "summarization" && (
                             <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                <button className="text-gray-400 hover:text-gray-600">
+                                <button className="text-ink-muted hover:text-ink-muted">
                                     <Info className="w-4 h-4" />
                                 </button>
                                 </TooltipTrigger>
@@ -93,7 +93,7 @@ export function SetupOverviewStep() {
         <div className="w-full max-w-xs space-y-4">
           <Button
             onClick={handleContinue}
-            className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white"
+            className="w-full h-11 bg-ink hover:bg-ink text-on-accent"
           >
             Let's Go
           </Button>
@@ -102,7 +102,7 @@ export function SetupOverviewStep() {
               href="https://github.com/Zackriya-Solutions/meeting-minutes"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-gray-600 hover:underline"
+              className="text-xs text-ink-muted hover:underline"
             >
               Report issues on GitHub
             </a>
