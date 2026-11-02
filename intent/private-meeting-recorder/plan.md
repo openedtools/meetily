@@ -208,6 +208,13 @@ AC-ID-1 to AC-ID-6, AC-UI-1 to AC-UI-8 (AC-UI-9 only if the illustration is supp
 | D. Live Q&A | Benchmark in two profiles (CPU and CUDA for the RTX 3070 Ti), context builder, Ask box | AC-QA-1 to 4, AC-QA-6, AC-QA-7 |
 | E. Vault export | Format library and fixtures, one-way export, Sync screen, disclosure | AC-SYNC-1, 2, 5, 6, 8, 9, export part of AC-NF-1 and AC-NF-2 |
 | F. Two-way sync | Import, conflicts, deletion propagation, after the device checks | AC-SYNC-3, 4, 7 |
+| WP5 | Tokens from spec 3.2 plus hover and pressed variants | Also `surface-hover`, `accent-tint`, `danger-tint`, `success-tint`, `warning-tint`, eight speaker pairs and HSL copies of eleven tokens for BlockNote. All text pairs are in `tokens.contrast.json` (89 checks) | The codemod needed tints for alerts and badges; BlockNote's precompiled CSS reads `hsl(var(--x))` |
+| WP5 | Theme stored as an override | Stored in WebView local storage, applied before first paint by an inline script | No flash of the wrong theme; nothing to migrate |
+| WP5 | shadcn `accent` | shadcn's own `accent` (a grey hover) is now `surface-hover` in the five ui components, so `accent` means terracotta as the spec says | Name clash |
+| WP6 | One directory per commit with before and after screenshots | Seven codemod commits, then hand work, reviewed with one full screenshot pass in light and dark (before shots taken once, light only). The first codemod commit also carried the speaker tokens and the codemod script | A full capture per directory would have tripled the run time without changing the review |
+| WP6 | Not in the plan | Tailwind now scans `src/lib`, `src/hooks` and `src/contexts`; BlockNote overrides moved outside `@layer base` | Speaker colours had never been generated, and Tailwind silently dropped layered rules for classes it never saw |
+| WP6 | Not in the plan | Keyboard fixes: focus ring on the summary editor, 24 px speaker chips, switches and resize handle, hover-only buttons visible on focus, an accessible name on the sidebar toggle | Found by the keyboard check (AC-UI-4) |
+| WP7 | Installer images until Ryan supplies generated art | Plain on-brand BMPs rendered from the icon SVG by `scripts/brand-assets.mjs` with Playwright's Chromium | No image library on the build machine |
 
 Feedback from the A1 and A2 Windows tests, to place when those phases are planned:
 
