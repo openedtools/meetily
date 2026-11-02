@@ -31,7 +31,7 @@ export function MoveToFolderMenu({ meetingId, currentFolderId, onMoved, onNewFol
       <PopoverTrigger asChild>
         <button
           onClick={(e) => e.stopPropagation()}
-          className="hover:text-blue-600 p-1 rounded-md hover:bg-blue-50 flex-shrink-0"
+          className="hover:text-accent-strong p-1 rounded-md hover:bg-accent-tint flex-shrink-0"
           aria-label="Move to folder"
           title="Move to folder"
         >
@@ -45,13 +45,13 @@ export function MoveToFolderMenu({ meetingId, currentFolderId, onMoved, onNewFol
             <CommandGroup heading="Move to">
               <CommandItem value="__none__" onSelect={() => choose(null)}>
                 <Check className={`mr-2 h-4 w-4 ${currentFolderId ? 'opacity-0' : 'opacity-100'}`} />
-                <NotebookPen className="mr-2 h-4 w-4 text-gray-500" />
+                <NotebookPen className="mr-2 h-4 w-4 text-ink-muted" />
                 <span className="truncate">No folder</span>
               </CommandItem>
               {folders.map((f) => (
                 <CommandItem key={f.id} value={f.name} onSelect={() => choose(f.id)}>
                   <Check className={`mr-2 h-4 w-4 ${currentFolderId === f.id ? 'opacity-100' : 'opacity-0'}`} />
-                  <Folder className="mr-2 h-4 w-4 text-gray-500" />
+                  <Folder className="mr-2 h-4 w-4 text-ink-muted" />
                   <span className="truncate">{f.name}</span>
                 </CommandItem>
               ))}
@@ -65,7 +65,7 @@ export function MoveToFolderMenu({ meetingId, currentFolderId, onMoved, onNewFol
                   onNewFolder(meetingId);
                 }}
               >
-                <FolderPlus className="mr-2 h-4 w-4 text-blue-600" />
+                <FolderPlus className="mr-2 h-4 w-4 text-accent-strong" />
                 New folder…
               </CommandItem>
             </CommandGroup>

@@ -31,6 +31,24 @@
   --scrim: 43 38 34; /* #2B2622 behind dialogs, used at 45 percent */
   --scrim-alpha: 0.45;
 
+  /* Speaker chips: eight quiet, warm pairs, each text colour 4.5:1 or more on its tint */
+  --speaker-1: 244 225 215; /* #F4E1D7 peach */
+  --speaker-1-ink: 150 79 44; /* #964F2C */
+  --speaker-2: 225 229 234; /* #E1E5EA dusk */
+  --speaker-2-ink: 77 98 128; /* #4D6280 */
+  --speaker-3: 232 234 225; /* #E8EAE1 sage */
+  --speaker-3-ink: 93 103 66; /* #5D6742 */
+  --speaker-4: 237 222 226; /* #EDDEE2 rose */
+  --speaker-4-ink: 138 66 84; /* #8A4254 */
+  --speaker-5: 240 232 219; /* #F0E8DB sand */
+  --speaker-5-ink: 126 94 37; /* #7E5E25 */
+  --speaker-6: 238 223 221; /* #EEDFDD clay */
+  --speaker-6-ink: 148 68 56; /* #944438 */
+  --speaker-7: 237 235 222; /* #EDEBDE olive */
+  --speaker-7-ink: 107 102 46; /* #6B662E */
+  --speaker-8: 242 236 217; /* #F2ECD9 ochre */
+  --speaker-8-ink: 125 98 18; /* #7D6212 */
+
   --radius-card: 10px;
   --radius-control: 8px;
   --font-sans: 'Source Sans 3 Variable', ui-sans-serif, system-ui, sans-serif;
@@ -62,4 +80,20 @@
   --disabled: 92 83 74; /* #5C534A */
   --scrim: 0 0 0; /* #000000 */
   --scrim-alpha: 0.6;
+  --speaker-1: 65 46 37; /* #412E25 peach */
+  --speaker-1-ink: 204 150 123; /* #CC967B */
+  --speaker-2: 46 50 56; /* #2E3238 dusk */
+  --speaker-2-ink: 148 163 184; /* #94A3B8 */
+  --speaker-3: 53 56 46; /* #35382E sage */
+  --speaker-3-ink: 164 173 138; /* #A4AD8A */
+  --speaker-4: 59 43 47; /* #3B2B2F rose */
+  --speaker-4-ink: 194 147 159; /* #C2939F */
+  --speaker-5: 61 54 41; /* #3D3629 sand */
+  --speaker-5-ink: 198 165 108; /* #C6A56C */
+  --speaker-6: 60 44 42; /* #3C2C2A clay */
+  --speaker-6-ink: 201 149 141; /* #C9958D */
+  --speaker-7: 58 57 44; /* #3A392C olive */
+  --speaker-7-ink: 186 180 120; /* #BAB478 */
+  --speaker-8: 64 57 38; /* #403926 ochre */
+  --speaker-8-ink: 214 184 92; /* #D6B85C */
 }

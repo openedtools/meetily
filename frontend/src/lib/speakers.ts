@@ -44,14 +44,14 @@ export async function fetchSpeakerNames(meetingId: string): Promise<Record<strin
 
 // A fixed palette so a speaker keeps the same colour everywhere in a meeting.
 const SPEAKER_COLORS = [
-  'bg-blue-50 text-blue-700 border-blue-200',
-  'bg-emerald-50 text-emerald-700 border-emerald-200',
-  'bg-amber-50 text-amber-800 border-amber-200',
-  'bg-purple-50 text-purple-700 border-purple-200',
-  'bg-rose-50 text-rose-700 border-rose-200',
-  'bg-cyan-50 text-cyan-700 border-cyan-200',
-  'bg-orange-50 text-orange-700 border-orange-200',
-  'bg-indigo-50 text-indigo-700 border-indigo-200',
+  'bg-speaker-1 text-speaker-1-ink border-speaker-1-ink/30',
+  'bg-speaker-2 text-speaker-2-ink border-speaker-2-ink/30',
+  'bg-speaker-3 text-speaker-3-ink border-speaker-3-ink/30',
+  'bg-speaker-4 text-speaker-4-ink border-speaker-4-ink/30',
+  'bg-speaker-5 text-speaker-5-ink border-speaker-5-ink/30',
+  'bg-speaker-6 text-speaker-6-ink border-speaker-6-ink/30',
+  'bg-speaker-7 text-speaker-7-ink border-speaker-7-ink/30',
+  'bg-speaker-8 text-speaker-8-ink border-speaker-8-ink/30',
 ];
 
 export function speakerColorClasses(key: string): string {
