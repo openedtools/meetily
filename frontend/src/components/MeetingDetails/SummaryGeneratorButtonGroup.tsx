@@ -86,7 +86,7 @@ export function SummaryGeneratorButtonGroup({
         <Button
           variant="outline"
           size="sm"
-          className="bg-gradient-to-r from-red-50 to-orange-50 hover:from-red-100 hover:to-orange-100 border-red-200 px-3 gap-2"
+          className="bg-gradient-to-r from-danger-tint to-warning-tint hover:from-danger-tint hover:to-warning-tint border-danger/40 px-3 gap-2"
           onClick={() => {
             onStopGeneration();
           }}
@@ -99,7 +99,7 @@ export function SummaryGeneratorButtonGroup({
         <Button
           variant="outline"
           size="sm"
-          className="bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200 px-3 gap-2"
+          className="bg-gradient-to-r from-accent-tint to-accent-tint hover:from-accent-tint hover:to-accent-tint border-accent/40 px-3 gap-2"
           onClick={() => {
             void onGenerateSummary(customPrompt);
           }}
@@ -180,7 +180,7 @@ export function SummaryGeneratorButtonGroup({
               >
                 <span>{template.name}</span>
                 {selectedTemplate === template.id && (
-                  <Check className="h-4 w-4 text-green-600" />
+                  <Check className="h-4 w-4 text-success" />
                 )}
               </DropdownMenuItem>
             ))}

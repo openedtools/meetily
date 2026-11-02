@@ -23,7 +23,7 @@ export function SummaryUpdaterButtonGroup({
       <Button
         variant="outline"
         size="sm"
-        className={`${isDirty ? 'bg-green-200' : ""}`}
+        className={`${isDirty ? 'bg-success-tint' : ""}`}
         title={isSaving ? "Saving" : "Save Changes"}
         onClick={() => {
           onSave();
